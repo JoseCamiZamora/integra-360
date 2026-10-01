@@ -8,9 +8,10 @@ use Filament\Facades\Filament;
 it('loads Core and Pesv from modules/', function (): void {
     $registry = app(ModuleRegistry::class);
 
-    expect(array_keys($registry->all()))->toBe(['core', 'pesv'])
+    // Other modules may exist; Core and Pesv must always be there.
+    expect($registry->all())->toHaveKeys(['core', 'pesv'])
         ->and($registry->get('core')->licensable)->toBeFalse()
-        ->and(array_keys($registry->licensable()))->toBe(['pesv']);
+        ->and($registry->licensable())->toHaveKey('pesv')->not->toHaveKey('core');
 });
 
 it('registers each module navigation group in the admin panel', function (): void {
