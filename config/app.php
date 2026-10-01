@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'Integra 360'),
 
     /*
     |--------------------------------------------------------------------------
@@ -60,12 +60,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | will be used by the PHP date and date-time functions. Integra 360
+    | operates in Colombia (no daylight saving time), so Bogotá is used.
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'America/Bogota'),
 
     /*
     |--------------------------------------------------------------------------
@@ -78,11 +78,27 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    'locale' => env('APP_LOCALE', 'es'),
 
-    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
+    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'es'),
 
-    'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
+    'faker_locale' => env('APP_FAKER_LOCALE', 'es_ES'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Regional Display Formats
+    |--------------------------------------------------------------------------
+    |
+    | Display formats for Colombia, shared by Filament and the driver view.
+    | Values are always stored in ISO format; these only affect output.
+    |
+    */
+
+    'date_format' => 'd/m/Y',
+
+    'datetime_format' => 'd/m/Y h:i a',
+
+    'currency' => 'COP',
 
     /*
     |--------------------------------------------------------------------------
