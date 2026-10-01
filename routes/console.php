@@ -1,8 +1,21 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+declare(strict_types=1);
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schedule;
+
+/*
+|--------------------------------------------------------------------------
+| Scheduled tasks
+|--------------------------------------------------------------------------
+|
+| Run locally with `php artisan schedule:work`; in Laravel Cloud the
+| scheduler is enabled per environment (see docs/deploy.md).
+|
+*/
+
+// Heartbeat: proves in the logs that the scheduler is alive.
+Schedule::call(fn () => Log::info('Scheduler heartbeat: the task scheduler is running.'))
+    ->name('scheduler-heartbeat')
+    ->everyFifteenMinutes();
