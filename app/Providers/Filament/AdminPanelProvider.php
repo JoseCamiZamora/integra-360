@@ -46,6 +46,7 @@ class AdminPanelProvider extends PanelProvider
             ->monoFont(DesignTokens::FONT_MONO, provider: GoogleFontProvider::class)
             ->darkMode(false)
             ->viteTheme('resources/css/filament/admin/theme.css')
+            ->topbar(false)
             ->sidebarCollapsibleOnDesktop()
             ->middleware([
                 EncryptCookies::class,
