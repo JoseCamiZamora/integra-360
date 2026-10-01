@@ -1,0 +1,12 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+|--------------------------------------------------------------------------
+| {{ name }} web routes
+|--------------------------------------------------------------------------
+|
+| Loaded by {{ module }}ServiceProvider inside the "web" middleware group.
+|
+*/

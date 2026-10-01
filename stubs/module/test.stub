@@ -1,0 +1,16 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Modules\ModuleRegistry;
+use Modules\{{ module }}\Providers\{{ module }}ServiceProvider;
+
+it('loads the {{ module }} module from modules/', function (): void {
+    $registry = app(ModuleRegistry::class);
+    $provider = app()->getProvider({{ module }}ServiceProvider::class);
+
+    expect($registry->has('{{ code }}'))->toBeTrue()
+        ->and($registry->get('{{ code }}')->name())->toBe('{{ name }}')
+        ->and($provider)->toBeInstanceOf({{ module }}ServiceProvider::class)
+        ->and(realpath($provider->modulePath()))->toBe(realpath(base_path('modules/{{ module }}')));
+});

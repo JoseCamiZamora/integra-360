@@ -1,0 +1,15 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\{{ module }}\Providers;
+
+use App\Modules\ModuleServiceProvider;
+
+final class {{ module }}ServiceProvider extends ModuleServiceProvider
+{
+    public function code(): string
+    {
+        return '{{ code }}';
+    }
+}
