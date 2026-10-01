@@ -1,0 +1,93 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+@import '../../tokens.css';
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+@source '../../../../resources/views/components/**/*';
+@source '../../../../modules/*/src/Filament/**/*';
+@source '../../../../modules/*/resources/views/**/*';
+
+/*
+ * Opción A · Centro de control: dark sidebar, light content area.
+ * Colours come from tokens.css; the primary palette is set in PHP
+ * (AdminPanelProvider) from the same value.
+ */
+
+.fi-body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+}
+
+.fi-sidebar,
+.fi-sidebar.fi-sidebar-open {
+    background-color: var(--color-sidebar);
+}
+
+.fi-sidebar-header-ctn,
+.fi-sidebar-header {
+    background-color: var(--color-sidebar);
+}
+
+.fi-sidebar-header-controls::after,
+.fi-sidebar-footer {
+    border-color: rgb(255 255 255 / 0.12);
+}
+
+.fi-sidebar-group-label,
+.fi-sidebar-group-btn .fi-icon,
+.fi-sidebar-group-dropdown-trigger-btn .fi-icon,
+.fi-sidebar-item-btn > .fi-icon,
+.fi-sidebar-database-notifications-btn .fi-icon {
+    color: var(--color-sidebar-text-muted);
+}
+
+.fi-sidebar-item-label,
+.fi-sidebar-database-notifications-btn-label {
+    color: var(--color-sidebar-text);
+}
+
+.fi-sidebar-item-btn,
+.fi-sidebar-group-dropdown-trigger-btn,
+.fi-sidebar-database-notifications-btn {
+    border-radius: var(--radius-control);
+
+    &:hover,
+    &:focus-visible {
+        background-color: rgb(255 255 255 / 0.08);
+    }
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn {
+    background-color: rgb(255 255 255 / 0.12);
+    box-shadow: inset 3px 0 0 0 var(--color-sidebar-text);
+
+    & > .fi-icon,
+    & .fi-sidebar-item-label {
+        color: var(--color-sidebar-text);
+    }
+}
+
+.fi-sidebar .fi-icon-btn {
+    color: var(--color-sidebar-text-muted);
+}
+
+.fi-section,
+.fi-wi-stats-overview-stat,
+.fi-ta-ctn {
+    border-radius: var(--radius-card);
+}
+
+.fi-btn,
+.fi-input-wrp,
+.fi-select-input {
+    border-radius: var(--radius-control);
+}
+
+/* Brand: dark text in the white topbar, light text on the dark sidebar. */
+.i360-brand-name {
+    color: var(--color-text);
+}
+
+.fi-sidebar .i360-brand-name {
+    color: var(--color-sidebar-text);
+}
