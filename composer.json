@@ -1,13 +1,15 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "integra360/integra-360",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Integra 360: plataforma SaaS de gestión operativa y normativa para empresas de transporte en Colombia.",
     "keywords": [
         "laravel",
-        "framework"
+        "saas",
+        "pesv",
+        "transporte"
     ],
-    "license": "MIT",
+    "license": "proprietary",
     "require": {
         "php": "^8.3",
         "filament/filament": "^5.9",
@@ -48,7 +50,7 @@
     },
     "scripts": {
         "setup": [
-            "composer install",
+            "@composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
             "@php artisan migrate --force",
@@ -63,9 +65,20 @@
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
         ],
+        "lint": "@php vendor/bin/pint --test",
+        "format": "@php vendor/bin/pint",
+        "analyse": "@php vendor/bin/phpstan analyse --memory-limit=1G --no-progress",
+        "deptrac": "@php vendor/bin/deptrac analyse --no-progress",
+        "check": [
+            "@lint",
+            "@analyse",
+            "@deptrac",
+            "@test"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "@php artisan package:discover --ansi"
+            "@php artisan package:discover --ansi",
+            "@php artisan filament:upgrade"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
@@ -97,5 +110,12 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "scripts-descriptions": {
+        "check": "Pint (verificación), Larastan, Deptrac y Pest: lo mismo que ejecuta GitHub Actions.",
+        "lint": "Verifica el estilo de código con Pint sin modificar archivos.",
+        "format": "Corrige el estilo de código con Pint.",
+        "analyse": "Análisis estático con Larastan (nivel 6).",
+        "deptrac": "Verifica las reglas de dependencia entre módulos."
+    }
 }
