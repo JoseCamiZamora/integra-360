@@ -137,17 +137,38 @@ final class ModuleScaffolder
         $entry = <<<PHP
         '{$code}' => [
                     'name' => '{$code}::module.name',
-                    'provider' => Modules\\{$module}\\Providers\\{$module}ServiceProvider::class,
+                    'provider' => {$module}ServiceProvider::class,
                     'licensable' => true,
                 ],
         PHP;
 
         $indent = str_repeat(' ', 8);
 
-        $this->files->put($path, str_replace(
-            self::CONFIG_MARKER,
-            $entry."\n\n".$indent.self::CONFIG_MARKER,
-            $config,
-        ));
+        $config = str_replace(self::CONFIG_MARKER, $entry."\n\n".$indent.self::CONFIG_MARKER, $config);
+
+        $this->files->put($path, $this->addImport($config, "Modules\\{$module}\\Providers\\{$module}ServiceProvider"));
+    }
+
+    /**
+     * Adds a `use` statement keeping the alphabetical order Pint enforces.
+     */
+    private function addImport(string $php, string $class): string
+    {
+        preg_match_all('/^use [^;]+;\n/m', $php, $matches);
+
+        $imports = $matches[0];
+        $imports[] = "use {$class};\n";
+        $imports = array_unique($imports);
+        sort($imports, SORT_STRING | SORT_FLAG_CASE);
+
+        $block = implode('', $imports);
+        $php = (string) preg_replace('/^use [^;]+;\n\n?/m', '', $php);
+
+        return (string) preg_replace_callback(
+            '/^declare\(strict_types=1\);\n\n/m',
+            fn (array $match): string => $match[0].$block."\n",
+            $php,
+            1,
+        );
     }
 }

@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Providers\CoreServiceProvider;
+use Modules\Pesv\Providers\PesvServiceProvider;
+
 return [
 
     /*
@@ -17,7 +20,7 @@ return [
     | - provider:   the module's service provider.
     | - licensable: whether the module is sold separately. Core is not.
     |
-    | `php artisan module:make` appends new modules above the marker below.
+    | `php artisan module:make` adds the import and the entry automatically.
     |
     */
 
@@ -25,13 +28,13 @@ return [
 
         'core' => [
             'name' => 'core::module.name',
-            'provider' => Modules\Core\Providers\CoreServiceProvider::class,
+            'provider' => CoreServiceProvider::class,
             'licensable' => false,
         ],
 
         'pesv' => [
             'name' => 'pesv::module.name',
-            'provider' => Modules\Pesv\Providers\PesvServiceProvider::class,
+            'provider' => PesvServiceProvider::class,
             'licensable' => true,
         ],
 
