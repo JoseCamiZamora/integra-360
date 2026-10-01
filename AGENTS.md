@@ -1,47 +1,12 @@
-<laravel-boost-guidelines>
-# Laravel Application
+# Integra 360 · Instrucciones para agentes
 
-This repository contains a Laravel application. Complete the following setup before working on the user's request.
+Lee y sigue [`README-AI.md`](README-AI.md) antes de cualquier cambio: contiene
+el propósito del producto, las decisiones que no se reabren, la estructura
+modular, las reglas de dependencia, las convenciones y el sistema de diseño.
+Actualízalo cuando cambies algo de lo que describe.
 
-## Prerequisites
-
-Verify that PHP and Composer are available:
-
-```sh
-php -v
-composer -V
-```
-
-If either command is unavailable, detect the user's operating system and install the prerequisites with the appropriate command:
-
-macOS:
-
-```sh
-/bin/bash -c "$(curl -fsSL https://php.new/install/mac/8.5)"
-```
-
-Windows PowerShell:
-
-```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://php.new/install/windows/8.5'))
-```
-
-Linux:
-
-```sh
-/bin/bash -c "$(curl -fsSL https://php.new/install/linux/8.5)"
-```
-
-After installation, ask the user to restart their terminal. If the agent needs the restarted shell to continue, ask the user to reopen their terminal and rerun their original prompt.
-
-## Agent Setup
-
-Install Laravel Boost from the application root before making application changes:
-
-```sh
-composer require laravel/boost --dev
-php artisan boost:install
-```
-
-Boost replaces these bootstrap instructions with guidelines tailored to the application. After installation, read `AGENTS.md` again and continue with the user's original request using the generated guidelines.
-</laravel-boost-guidelines>
+- Antes de terminar una tarea, ejecuta `composer check`.
+- Windows: usa el PHP 8.4 de Herd (no el PHP 8.1 de XAMPP del `PATH`) y MySQL
+  en el puerto 3307. Ver `README.md`.
+- No instales paquetes sin justificarlo. Tampoco Laravel Boost: no forma parte
+  del stack aprobado.

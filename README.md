@@ -1,58 +1,139 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Integra 360
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Plataforma SaaS para empresas de transporte en Colombia (pasajeros y carga) que
+centraliza la gestión operativa y normativa: Talento Humano, SG-SST, PESV,
+SAGRILAFT y Calidad. Los módulos se venden por separado y se activan por
+empresa. El primer entregable es el piloto del módulo **PESV**.
 
-## About Laravel
+- Laravel 13 · PHP 8.4 · MySQL 8 · Filament 5 · Livewire 4 · Tailwind 4
+- Monolito modular: `modules/Core` y `modules/Pesv`
+- Contexto completo para IA y convenciones: [`README-AI.md`](README-AI.md)
+- Despliegue en Laravel Cloud: [`docs/deploy.md`](docs/deploy.md)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+| Interfaz | Ruta |
+|---|---|
+| Panel administrativo (Filament) | `/app` |
+| Vista móvil del conductor | `/conductor` |
+| Salud | `/up` |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+> Hasta I360-01 no hay inicio de sesión. `/app` y `/conductor` solo abren en
+> entornos `local`/`testing` o con `PROVISIONAL_ACCESS_ENABLED=true`.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Entorno local con Laravel Herd (opción principal)
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Requisitos: [Laravel Herd](https://herd.laravel.com) con PHP 8.4, MySQL 8,
+Node 22 o superior y Git.
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone https://github.com/JoseCamiZamora/integra-360.git
+cd integra-360
+composer install
+cp .env.example .env
+php artisan key:generate
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Crea las dos bases de datos y un usuario con permisos sobre ambas:
 
-## Contributing
+```sql
+CREATE DATABASE integra360 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE integra360_testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'integra'@'localhost' IDENTIFIED BY 'tu-contraseña';
+GRANT ALL PRIVILEGES ON integra360.* TO 'integra'@'localhost';
+GRANT ALL PRIVILEGES ON integra360_testing.* TO 'integra'@'localhost';
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Escribe la contraseña en `DB_PASSWORD` del `.env` y luego:
 
-## Code of Conduct
+```bash
+php artisan migrate
+npm install
+npm run build
+herd link integra-360
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Abre <http://integra-360.test/app> y <http://integra-360.test/conductor>.
 
-## Security Vulnerabilities
+Para desarrollo con recarga automática: `npm run dev`. Para procesar colas:
+`php artisan queue:work`. Para el programador: `php artisan schedule:work`.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Windows con XAMPP instalado
 
-## License
+En el equipo de desarrollo conviven dos entornos. El proyecto usa **solo** el
+de Herd:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| | XAMPP (no usar) | Proyecto |
+|---|---|---|
+| PHP | 8.1 (`C:\xampp\php`) | 8.4 de Herd |
+| Base de datos | MariaDB en el puerto **3306** | MySQL 8 en el puerto **3307** |
+| Carpeta | `htdocs` | `D:\proyectos\integra-360` (fuera de `htdocs`) |
+
+- `C:\xampp\php` aparece en el `PATH` **antes** que Herd, así que `php` y
+  `composer` en una terminal nueva pueden resolver al PHP 8.1 de XAMPP. Laravel
+  13 no funciona con él. Comprueba con `php -v` y, si no ves 8.4, usa los
+  binarios de Herd:
+  - PHP: `%USERPROFILE%\.config\herd\bin\php84\php.exe`
+  - Composer: `%USERPROFILE%\.config\herd\bin\php84\php.exe %USERPROFILE%\.config\herd\bin\composer.phar`
+
+  El `composer.bat` de Herd llama a `php` del `PATH`, así que también puede
+  acabar en XAMPP. La solución de fondo es mover Herd por encima de XAMPP en el
+  `PATH` del usuario.
+- El `.env` apunta a `DB_PORT=3307`. Si ves errores de MariaDB o de versión de
+  servidor, estás conectando al 3306 de XAMPP.
+- No modifiques XAMPP ni su configuración.
+
+## Entorno local con Laravel Sail (alternativa con Docker)
+
+> Pendiente de verificar: en el equipo de desarrollo actual no hay Docker.
+
+`compose.yaml` levanta PHP 8.4 y MySQL 8.4, y crea `integra360_testing` al
+iniciar el contenedor. En el `.env`:
+
+```dotenv
+APP_URL=http://localhost
+DB_HOST=mysql
+DB_PORT=3306
+DB_USERNAME=integra
+DB_PASSWORD=una-contraseña
+# Si XAMPP o Herd ocupan 3306/3307 en tu equipo:
+FORWARD_DB_PORT=3308
+```
+
+```bash
+composer install
+./vendor/bin/sail up -d
+./vendor/bin/sail artisan key:generate
+./vendor/bin/sail artisan migrate
+./vendor/bin/sail npm install
+./vendor/bin/sail npm run build
+```
+
+Abre <http://localhost/app>. Los comandos de calidad se ejecutan igual,
+anteponiendo `./vendor/bin/sail` (por ejemplo, `./vendor/bin/sail composer check`).
+
+## Calidad y pruebas
+
+```bash
+composer check
+```
+
+Ejecuta, en este orden, lo mismo que GitHub Actions:
+
+| Comando | Qué hace |
+|---|---|
+| `composer lint` | Pint en modo verificación (`composer format` corrige) |
+| `composer analyse` | Larastan nivel 6 |
+| `composer deptrac` | Reglas de dependencia entre módulos |
+| `composer test` | Pest sobre MySQL (`integra360_testing`, nunca SQLite) |
+
+Las pruebas de cada módulo viven en `modules/<Módulo>/tests` y se ejecutan con
+el resto. Para uno solo: `php artisan test modules/Pesv`.
+
+## Módulos
+
+```bash
+php artisan module:make Sgsst
+composer dump-autoload
+php artisan test modules/Sgsst
+```
+
+Ver [`README-AI.md`](README-AI.md#cómo-agregar-un-módulo-nuevo).
