@@ -49,6 +49,28 @@ si el disco por defecto no es compatible con S3 (`AppServiceProvider`).
    ya acepta.
 5. Vuelve a desplegar para que tome efecto.
 
+### El bucket debe existir antes de compilar
+
+La protección no solo actúa en tiempo de ejecución. `composer install` ejecuta
+`package:discover` y `filament:upgrade`, que arrancan la aplicación **durante la
+compilación** con `APP_ENV=production`. Si en ese momento `FILESYSTEM_DISK` no
+apunta a un disco S3, **la compilación falla**. Es intencional: es mejor un
+despliegue fallido que archivos perdidos.
+
+Laravel Cloud escribe las variables del entorno, también las inyectadas por
+los recursos, en un `.env` dentro del contexto de compilación. Para que la
+variable del bucket exista en esa fase:
+
+1. Adjunta el bucket como disco por defecto **antes del primer despliegue**
+   (o despliega una vez más después de adjuntarlo).
+2. Declara además `FILESYSTEM_DISK=s3` como variable propia (sección 4). Las
+   variables propias siempre llegan al `.env` de compilación y prevalecen sobre
+   las inyectadas. El valor es el mismo que inyecta el bucket con disco `s3`,
+   así que la compilación no depende de cómo se inyecten las variables.
+3. Comprueba en **Settings → General** que aparecen `FILESYSTEM_DISK=s3` y las
+   `AWS_*` del bucket. Sin las credenciales `AWS_*`, la compilación pasa, pero
+   las subidas fallan con error (nunca caen al disco local).
+
 ## 4. Variables de entorno
 
 **Settings → Environment variables.** Cloud genera `APP_KEY` y añade las
@@ -68,6 +90,7 @@ variables de la base de datos y del bucket. Define además:
 | `SESSION_DRIVER` | `database` | Sin Redis en el piloto |
 | `CACHE_STORE` | `database` | Sin Redis en el piloto |
 | `QUEUE_CONNECTION` | `database` | Ver sección 6 |
+| `FILESYSTEM_DISK` | `s3` | Debe existir ya en la compilación (sección 3) |
 | `APP_MAINTENANCE_DRIVER` | `cache` | Modo mantenimiento compartido entre réplicas |
 | `APP_MAINTENANCE_STORE` | `database` | |
 | `MAIL_MAILER` | `log` | Hasta configurar un proveedor de correo |
@@ -90,19 +113,25 @@ Build commands:
 composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 npm ci
 npm run build
+php artisan optimize
 ```
 
 Deploy commands:
 
 ```bash
 php artisan migrate --force
-php artisan optimize
 ```
 
-- `composer install` ejecuta `filament:upgrade`, que publica los assets de
-  Filament (no están en el repositorio).
-- `optimize` cachea configuración, rutas, vistas y eventos. Por eso **no se usa
-  `env()` fuera de `config/`**.
+- `composer install` ejecuta `package:discover` y `filament:upgrade`; este
+  último publica los assets de Filament, que no están en el repositorio. Ambos
+  arrancan la aplicación en modo producción, así que requieren el bucket
+  (sección 3).
+- `optimize` cachea configuración, rutas, vistas y eventos. Laravel Cloud
+  indica ejecutarlo en la compilación, no en el despliegue, porque los cambios
+  de archivos de los deploy commands no se conservan. Usa el `.env` de
+  compilación, que ya trae todas las variables. Por eso **no se usa `env()`
+  fuera de `config/`**, y cualquier cambio de variables exige volver a
+  desplegar.
 - Laravel Cloud reinicia los workers de cola en cada despliegue.
 
 ## 6. Colas (driver `database`)
@@ -168,8 +197,10 @@ Sin el secreto, el job de despliegue termina con una advertencia y no despliega.
 ## 9. Lista de verificación del primer despliegue
 
 - [ ] Base de datos MySQL adjunta.
-- [ ] Bucket privado `s3` adjunto como disco por defecto.
-- [ ] Variables de la sección 4 definidas (`APP_DEBUG=false`).
+- [ ] Bucket privado `s3` adjunto como disco por defecto **antes** del primer
+      despliegue.
+- [ ] Variables de la sección 4 definidas (`APP_DEBUG=false`,
+      `FILESYSTEM_DISK=s3`).
 - [ ] Build y deploy commands de la sección 5.
 - [ ] Background process `queue:work` (sección 6).
 - [ ] Scheduler activado y Scale to Zero desactivado (sección 7).
@@ -186,3 +217,4 @@ Sin el secreto, el job de despliegue termina con una advertencia y no despliega.
 - [Managed Queues](https://cloud.laravel.com/docs/queues)
 - [Object Storage](https://cloud.laravel.com/docs/resources/object-storage)
 - [Deployments y deploy hooks](https://cloud.laravel.com/docs/deployments)
+- [Environments: build commands y variables](https://cloud.laravel.com/docs/environments)

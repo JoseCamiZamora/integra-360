@@ -30,12 +30,26 @@ jobs:
           --health-timeout=5s
           --health-retries=20
 
+    # Job-level so they exist from `composer install` on: its post-autoload-dump
+    # scripts (package:discover, filament:upgrade) boot the app before any .env
+    # exists, and Laravel then defaults to "production", where AppServiceProvider
+    # rightly refuses a non-S3 disk. Real env vars also win over the .env copied
+    # later from .env.example (Herd values such as DB_PORT=3307).
     env:
+      APP_ENV: testing
+      APP_DEBUG: true
+      FILESYSTEM_DISK: local
       DB_CONNECTION: mysql
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
+      DB_DATABASE: integra360_testing
       DB_USERNAME: integra
       DB_PASSWORD: secret
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      BROADCAST_CONNECTION: log
 
     steps:
       - uses: actions/checkout@v4
