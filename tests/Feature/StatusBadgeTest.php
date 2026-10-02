@@ -2,34 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Support\Status\HasStatusTone;
 use App\Support\Status\StatusTone;
 use Illuminate\Support\Facades\Blade;
-
-enum FakeInspectionResult: string implements HasStatusTone
-{
-    case Fit = 'fit';
-    case FitWithFinding = 'fit_with_finding';
-    case Unfit = 'unfit';
-
-    public function statusTone(): StatusTone
-    {
-        return match ($this) {
-            self::Fit => StatusTone::Success,
-            self::FitWithFinding => StatusTone::Warning,
-            self::Unfit => StatusTone::Danger,
-        };
-    }
-
-    public function statusLabel(): string
-    {
-        return match ($this) {
-            self::Fit => 'Apto',
-            self::FitWithFinding => 'Apto con novedad',
-            self::Unfit => 'No apto',
-        };
-    }
-}
+use Tests\Fixtures\FakeInspectionResult;
 
 it('always renders a symbol and a text label, never colour alone', function (StatusTone $tone, string $symbol, string $label): void {
     $html = Blade::render('<x-status-badge :status="$status" />', ['status' => $tone]);
