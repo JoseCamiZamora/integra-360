@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Modules\ModuleRegistry;
+use App\Support\Tenancy\CompanyContext;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
 
@@ -36,6 +38,19 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->ensureUploadsAreNotStoredLocallyInProduction();
+        $this->resetCompanyContextBetweenRequestsAndJobs();
+    }
+
+    /**
+     * The active company never leaks into the next request or queued job:
+     * jobs receive their company explicitly (CompanyContext::run()).
+     */
+    private function resetCompanyContextBetweenRequestsAndJobs(): void
+    {
+        $this->app->terminating(CompanyContext::forget(...));
+
+        Queue::before(CompanyContext::forget(...));
+        Queue::after(CompanyContext::forget(...));
     }
 
     /**
