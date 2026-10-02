@@ -12,12 +12,14 @@ empresa. El primer entregable es el piloto del módulo **PESV**.
 
 | Interfaz | Ruta |
 |---|---|
-| Panel administrativo (Filament) | `/app` |
+| Ingreso (documento o correo) | `/ingreso` |
+| Panel de la empresa (Filament) | `/app/{empresa}` |
+| Panel de la plataforma (super administrador) | `/plataforma` |
 | Vista móvil del conductor | `/conductor` |
 | Salud | `/up` |
 
-> Hasta I360-01 no hay inicio de sesión. `/app` y `/conductor` solo abren en
-> entornos `local`/`testing` o con `PROVISIONAL_ACCESS_ENABLED=true`.
+Todas las interfaces exigen sesión y el rol correspondiente; quien no ha
+ingresado va a `/ingreso`.
 
 ## Entorno local con Laravel Herd (opción principal)
 
@@ -45,13 +47,25 @@ GRANT ALL PRIVILEGES ON integra360_testing.* TO 'integra'@'localhost';
 Escribe la contraseña en `DB_PASSWORD` del `.env` y luego:
 
 ```bash
-php artisan migrate
+php artisan migrate --seed
 npm install
 npm run build
 herd link integra-360
 ```
 
-Abre <http://integra-360.test/app> y <http://integra-360.test/conductor>.
+`--seed` carga datos **ficticios** de desarrollo (`DevelopmentSeeder`): un
+super administrador, dos empresas y un usuario por rol. Todas las contraseñas
+son `password`; se ingresa con el número de documento:
+
+| Documento | Usuario |
+|---|---|
+| `1000000001` | Super administrador (`/plataforma`) |
+| `1010000010` | Administrador de la empresa de carga (con licencia PESV) |
+| `1010000050` | Conductor de la empresa de carga (sin correo) |
+| `1020000010` | Administrador de la empresa de pasajeros (sin licencia PESV) |
+
+La lista completa está en `modules/Core/database/seeders/DevelopmentSeeder.php`.
+Abre <http://integra-360.test/ingreso>.
 
 Para desarrollo con recarga automática: `npm run dev`. Para procesar colas:
 `php artisan queue:work`. Para el programador: `php artisan schedule:work`.

@@ -4,7 +4,7 @@ Este documento es la fuente de contexto para cualquier IA (o persona) que
 trabaje en el proyecto. **Léelo completo antes de cambiar código y actualízalo
 en cada prompt (I360-xx) que cambie algo de lo que aquí se describe.**
 
-Última actualización: I360-00 · Fundación (octubre de 2026).
+Última actualización: I360-01 · Núcleo (octubre de 2026).
 
 ## 1. Propósito del producto
 
@@ -32,7 +32,9 @@ se activan por empresa.
 | Arquitectura | Monolito modular con fronteras estrictas (Deptrac) |
 | Panel administrativo | Filament 5 (5.9), ruta `/app` |
 | Vista del conductor | Livewire 4 + Blade a medida, mobile-first, ruta `/conductor` |
-| Multiempresa | Base de datos compartida con `company_id` (se implementa en I360-01) |
+| Multiempresa | Base de datos compartida con `company_id` y *global scope* (`BelongsToCompany`); nunca una base por empresa |
+| Roles y permisos | spatie/laravel-permission con equipos (equipo = empresa) |
+| Auditoría | spatie/laravel-activitylog (modelo propio `AuditEntry`) |
 | Archivos | Almacenamiento compatible con S3; nunca disco local en producción |
 | Colas | Driver `database` en el piloto; sin Redis |
 | Idioma | Inglés en identificadores y comentarios de código; español de Colombia en la interfaz |
@@ -49,14 +51,17 @@ justificarlo.
 ```
 app/                      ← "Kernel": infraestructura compartida, sin lógica de negocio
   Modules/                ← ModuleServiceProvider (base), ModuleRegistry, ModuleScaffolder
+  Support/Tenancy/        ← CompanyContext, BelongsToCompany, CompanyScope (multiempresa)
   Support/Status/         ← StatusTone (enum) + HasStatusTone (contrato de estados)
   Support/DesignTokens.php← espejo PHP del color primario (para Filament)
   View/Components/        ← <x-status-badge>
-  Http/Middleware/        ← EnsureProvisionalAccess (temporal hasta I360-01)
-  Providers/Filament/     ← AdminPanelProvider (/app)
+  Filament/Tables/Columns/← StatusBadgeColumn (<x-status-badge> en tablas)
 config/modules.php        ← registro central de módulos
 modules/
   Core/                   ← siempre activo; no licenciable
+    src/Providers/Filament/  ← AdminPanelProvider (/app) y PlatformPanelProvider (/plataforma)
+    src/Licensing/           ← API pública: ModuleAccess, ModuleLimits, LicensedModulePolicy
+    permissions.php          ← permisos del módulo (cada módulo tiene el suyo)
   Pesv/                   ← primer módulo licenciable (piloto)
 stubs/module/             ← plantillas de module:make
 resources/css/tokens.css  ← tokens de diseño (fuente única)
@@ -73,7 +78,8 @@ modules/<Modulo>/
     Livewire/                             ← componentes "<codigo>::nombre"
     Providers/<Modulo>ServiceProvider.php
   database/{migrations,seeders,factories}/
-  routes/web.php          ← se carga con el middleware "web"
+  routes/web.php          ← se carga con "web" (+ sesión, empresa activa y licencia si es licenciable)
+  permissions.php         ← "modulo.recurso.accion" => roles por defecto
   resources/views/        ← vistas "<codigo>::vista"
   lang/es/                ← traducciones "<codigo>::archivo.clave"
   tests/                  ← Pest; corren con la suite principal
@@ -91,6 +97,9 @@ traducciones, componentes Livewire y el grupo de navegación de Filament.
 
 - Carga migraciones, `routes/web.php`, vistas, traducciones y componentes
   Livewire desde la carpeta del módulo.
+- Si el módulo es licenciable, sus rutas llevan además `auth`,
+  `password.changed`, `company.active` y `module.licensed:<codigo>` (los
+  define Core con `guardLicensableRoutesWith()`).
 - Descubre recursos, páginas y widgets de Filament en `src/Filament/*` y
   registra el grupo de navegación con la clave del módulo. Un recurso se agrupa
   bajo su módulo con `protected static string|UnitEnum|null $navigationGroup = '<codigo>';`.
@@ -100,14 +109,15 @@ traducciones, componentes Livewire y el grupo de navegación de Filament.
 ## 4. Reglas de dependencia (Deptrac: `deptrac.php`)
 
 1. `Core` no depende de ningún módulo.
-2. Los módulos licenciables dependen solo de `Core`, y únicamente de sus
-   `Contracts`, `Models` (públicos) y `Events`.
+2. Los módulos licenciables dependen solo de `Core`, y únicamente de su API
+   pública: `Contracts`, `Models`, `Events`, `Enums` y `Licensing`.
 3. Un módulo licenciable nunca depende de otro módulo licenciable. Si
    necesitan comunicarse, lo hacen con eventos o contratos definidos en `Core`.
 4. Ningún módulo lee ni escribe tablas de otro módulo directamente (Deptrac no
    lo puede verificar: revísalo en code review).
 
-Capas: `Kernel` (`App\`), `CorePublic` (`Modules\Core\{Contracts,Models,Events}`),
+Capas: `Kernel` (`App\`), `CorePublic` (`Modules\Core\{Contracts,Models,Events,Enums,Licensing}`;
+`Enums` y `Licensing` se agregaron en I360-01),
 `CoreInternal` (resto de Core) y una capa por cada carpeta de `modules/`,
 generada automáticamente. Todos pueden usar `Kernel`; `Kernel` no usa módulos.
 Las clases de vendor no se restringen. Las pruebas (`*/tests/*`) se excluyen.
@@ -160,6 +170,10 @@ Verificado el 01/10/2026 durante I360-00.
 | Novedad | `Finding` |
 | Módulo licenciable | `Module` |
 | Licencia de módulo | `ModuleLicense` |
+| Membresía (usuario en una empresa) | `Membership` (tabla `company_user`) |
+| Registro de auditoría | `AuditEntry` (tabla `activity_log`) |
+| Misionalidad (PESV) | `CompanyMissionType` |
+| Super administrador | `User::is_platform_admin` |
 | Plan Estratégico de Seguridad Vial | módulo `Pesv` |
 
 ## 6. Convenciones de código
@@ -238,6 +252,9 @@ npm run build                  # assets de producción
 php artisan queue:work         # procesa la cola database
 php artisan schedule:work      # programador en local
 php artisan schedule:list      # tareas programadas
+php artisan permissions:sync   # registra los permisos de cada módulo (--reset-grants restaura los roles)
+php artisan migrate:fresh --seed                      # datos ficticios de desarrollo
+php artisan db:seed --class=ProductionSeeder --force  # producción: catálogo, roles, permisos, super admin
 ```
 
 Entorno Windows del desarrollador: el `PATH` resuelve `php` al PHP 8.1 de
@@ -249,7 +266,8 @@ XAMPP. Usa siempre el PHP 8.4 de Herd y MySQL en el puerto 3307 (ver
 1. `php artisan module:make Sgsst` (nombre en StudlyCase). El comando:
    - crea `modules/Sgsst` con la estructura estándar, su
      `SgsstServiceProvider` (código `sgsst`), `routes/web.php`,
-     `lang/es/module.php` y una prueba que confirma que el módulo carga;
+     `lang/es/module.php`, `permissions.php` y una prueba que confirma que
+     el módulo carga;
    - agrega el autoload PSR-4 a `composer.json`;
    - registra el módulo en `config/modules.php` como licenciable.
 2. `composer dump-autoload`. Hasta hacerlo, la app no arranca y avisa con un
@@ -258,15 +276,138 @@ XAMPP. Usa siempre el PHP 8.4 de Herd y MySQL en el puerto 3307 (ver
    prueba `tests/Feature/ModuleTest.php`), y `licensable` si aplica.
 4. `php artisan test modules/Sgsst` y `composer check`. Deptrac crea la capa
    del módulo sin tocar `deptrac.php`.
-5. Actualiza este documento (sección 3 y el glosario si hay términos nuevos).
+5. Declara sus permisos en `modules/Sgsst/permissions.php`, ejecuta
+   `php artisan permissions:sync` y agrega el código al catálogo
+   (`ModuleCatalogSeeder`) si no estaba.
+6. Sus políticas heredan de `Modules\Core\Licensing\LicensedModulePolicy` y
+   sus modelos con datos de empresa usan `BelongsToCompany`.
+7. Actualiza este documento (sección 3 y el glosario si hay términos nuevos).
 
-## 10. Pendientes conocidos
+## 10. Multiempresa, acceso y licencias (I360-01)
 
-- **I360-01:** autenticación real, roles, multiempresa (`company_id`),
-  modelos de Core (empresas, usuarios, sedes, personas, vehículos, documentos,
-  alertas, licencias). Al implementarla, quitar `EnsureProvisionalAccess` de
-  `AdminPanelProvider` y de `modules/Core/routes/web.php`, y la variable
-  `PROVISIONAL_ACCESS_ENABLED`.
+**La separación de datos entre empresas es el requisito más importante del
+sistema.** Una empresa jamás ve datos de otra.
+
+### Regla de multiempresa
+
+- Una sola base de datos. Toda tabla con datos de una empresa lleva
+  `company_id` y su modelo usa `App\Support\Tenancy\BelongsToCompany`: filtra
+  por la empresa activa, llena `company_id` al crear y prohíbe mover un
+  registro de empresa. **Nunca** se filtra por `company_id` a mano.
+- La empresa activa vive en `App\Support\Tenancy\CompanyContext`:
+  - Peticiones web: la fija un middleware (`ApplyTenantContext` en `/app`,
+    `company.active` en `/conductor` y en las rutas de módulos) para el resto
+    de la petición, y se borra al terminar. Livewire re-ejecuta el middleware
+    persistente antes de cada actualización. En `/plataforma`, el gestor de
+    licencias de una empresa entra en el contexto de esa empresa
+    (`WorksInOwnerCompany`).
+  - Todo lo demás (colas, comandos, seeders, acciones que reciben una
+    empresa): `CompanyContext::run($company, fn () => ...)`. Las tareas en
+    cola reciben su empresa explícitamente; el contexto se limpia antes y
+    después de cada trabajo.
+- **Sin empresa activa, una consulta de un modelo con `BelongsToCompany`
+  lanza `MissingCompanyContext`.** Nunca devuelve datos de todas.
+- Solo el super administrador puede consultar fuera del *scope*, de forma
+  explícita: `Modelo::query()->withoutCompanyScope()`. Queda en la auditoría.
+- `User` no lleva `company_id` (una cuenta puede atender varias empresas): los
+  usuarios de la empresa activa son los que tienen una `Membership` en ella
+  (`User::query()->inActiveCompany()`). Las políticas lo vuelven a comprobar.
+- Filament: la empresa es el *tenant* del panel `/app/{empresa}` (está en la
+  URL; el selector va en el menú lateral). Filament añade su propio *scope*;
+  el de `BelongsToCompany` sigue siendo la garantía.
+
+### Entidades de Core
+
+| Modelo | Tabla | Notas |
+|---|---|---|
+| `Company` | `companies` | ULID, NIT único con dígito de verificación (`Support\Nit`), `mission_type`, borrado lógico. Inactiva = sus usuarios no ingresan |
+| `Branch` | `branches` | Empresa; una sola sede principal (índice único + `MakeBranchMain`). Toda empresa nace con una (`CreateCompany`) |
+| `User` | `users` | Clave entera (decisión 8). Documento único por tipo, correo opcional, `must_change_password`, `is_platform_admin`, `last_login_at` |
+| `Membership` | `company_user` | Empresa; usuario, sede, `is_active`, `joined_at`. Desactivar en una empresa no afecta otras |
+| `Module` | `modules` | Catálogo: `core`, `pesv`, `sgsst`, `human-resources`, `sagrilaft`, `quality` |
+| `ModuleLicense` | `module_licenses` | Empresa; fechas, límites (nulo = sin límite), `is_active`. Nunca se borra |
+| `AuditEntry` | `activity_log` | Empresa (o nula: eventos de plataforma), valores antes/después, IP. Solo lectura |
+
+`User` vive en `Modules\Core\Models` (ya no en `App\Models`): el Kernel no
+puede depender de `Company` ni de `Membership`. Por la misma razón los
+proveedores de los paneles están en Core.
+La migración de `users` se modificó en su lugar (nada se había desplegado).
+La aceptación de la política de datos (Ley 1581) se agregará como una columna
+nueva de `users`; no requiere reestructurar.
+
+### Acceso
+
+- Una sola pantalla de ingreso propia: `/ingreso` (documento o correo en el
+  mismo campo; los paneles Filament no tienen login y redirigen aquí).
+- 5 intentos fallidos por minuto por identificador e IP.
+- Contraseña temporal (`AAAA-1234`) generada por el administrador y mostrada
+  una sola vez; el primer ingreso obliga a cambiarla (`password.changed`).
+- Recuperación por correo (en cola) o, sin correo, nueva contraseña temporal
+  del administrador.
+- Un solo guard. "Recordarme" dura 30 días **solo** si todos los roles del
+  usuario son `driver`; los demás tienen sesión estándar.
+- Destino tras ingresar: `/plataforma` (super administrador), selector de
+  empresa (varias), selector de interfaz (conductor con otro rol, una vez por
+  sesión), `/conductor` o `/app/{empresa}`.
+
+### Roles y permisos
+
+Roles globales (sembrados); se asignan **por empresa** (equipo de spatie =
+empresa, resuelto por `CompanyTeamResolver` desde `CompanyContext`). Los
+permisos se llaman `modulo.recurso.accion`, cada módulo los declara en su
+`permissions.php` y `permissions:sync` los registra (los cambios posteriores
+a un rol se conservan). Toda autorización pasa por *policies*; el super
+administrador tiene reglas explícitas (`isPlatformAdmin()` en cada política),
+nunca un atajo que salte las políticas.
+
+| Permiso | company_admin | pesv_leader | management | area_manager | driver | viewer |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| `core.panel.access` | ✓ | ✓ | ✓ | ✓ | | ✓ |
+| `core.driver.access` | | | | | ✓ | |
+| `core.company.view` | ✓ | ✓ | ✓ | ✓ | | ✓ |
+| `core.company.update` | ✓ | | | | | |
+| `core.branches.view` | ✓ | ✓ | ✓ | ✓ | | ✓ |
+| `core.branches.create/update/delete` | ✓ | | | | | |
+| `core.users.view` | ✓ | ✓ | ✓ | | | ✓ |
+| `core.users.create/update/deactivate/reset-password` | ✓ | | | | | |
+| `core.audit.view` | ✓ | | | | | |
+| `pesv.overview.view` | ✓ | ✓ | ✓ | ✓ | | ✓ |
+
+### Licencias
+
+- `Modules\Core\Licensing\ModuleAccess` (API pública): `level()`,
+  `isEnabled()` (puede leer), `canWrite()`, `limits()`, `currentLevel()` y
+  `companiesWithWriteAccess()` (para tareas programadas).
+- Niveles: **activa** (dentro de fechas), **solo consulta** (vencida hace 30
+  días o menos), **sin acceso** (sin licencia, inactiva, no iniciada o pasado
+  el plazo). Core siempre está activo. Los datos nunca se borran.
+- Sin acceso: el menú del módulo no aparece y sus rutas responden 403. En solo
+  consulta, las peticiones que no son GET responden 403.
+- Políticas de módulos licenciables: heredan de `LicensedModulePolicy`
+  (lectura = puede leer + permiso `.view`; escritura = activa + permiso).
+- Tareas programadas: iterar `companiesWithWriteAccess('<codigo>')` y trabajar
+  dentro de `CompanyContext::run()`.
+- Límites de vehículos y personas: solo consulta (`ModuleLimits`); se aplican
+  al crear registros en I360-02. Cobro manual, sin pasarela.
+
+### Auditoría
+
+Se registran: creación, cambios y eliminación de empresas, sedes, usuarios,
+membresías y licencias (valores antes y después), roles asignados y
+retirados, ingresos exitosos y fallidos, cambios y restablecimientos de
+contraseña y consultas fuera del *scope*. Cada registro guarda empresa,
+autor, IP y una etiqueta del sujeto. **Nunca** contraseñas ni tokens.
+`company_admin` ve la de su empresa; el super administrador, la de todas.
+
+## 11. Pendientes conocidos
+
+- **I360-02:** personas, conductores como perfil, vehículos y documentos con
+  vencimiento; aplicar los límites de `ModuleLimits` al crear registros.
+- Vincular una cuenta existente a otra empresa (consultores): hoy un documento
+  ya registrado se rechaza para no mostrar datos personales entre empresas;
+  lo hará el super administrador en un prompt posterior.
+- Aceptación de la política de tratamiento de datos en el primer ingreso.
+- Envío de la contraseña temporal por WhatsApp (fase 2).
 - Verificar el entorno con Sail cuando haya Docker.
 - Los textos de estado por defecto (`lang/es/status.php`) son genéricos; los
   estados de negocio deben aportar su propia etiqueta.

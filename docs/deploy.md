@@ -95,13 +95,14 @@ variables de la base de datos y del bucket. Define además:
 | `APP_MAINTENANCE_STORE` | `database` | |
 | `MAIL_MAILER` | `log` | Hasta configurar un proveedor de correo |
 | `MAIL_FROM_ADDRESS` | remitente real | |
-| `PROVISIONAL_ACCESS_ENABLED` | `false` | Ver nota |
+| `PLATFORM_ADMIN_NAME` | nombre del super administrador | Solo para el primer despliegue (sección 10) |
+| `PLATFORM_ADMIN_DOCUMENT_TYPE` | `CC` | Ídem |
+| `PLATFORM_ADMIN_DOCUMENT_NUMBER` | su número de documento | Ídem; con él ingresa |
+| `PLATFORM_ADMIN_EMAIL` | su correo (opcional) | Ídem |
+| `PLATFORM_ADMIN_PASSWORD` | contraseña temporal larga | Ídem; se cambia en el primer ingreso |
 
-> **Acceso provisional.** Hasta I360-01 no hay inicio de sesión: en producción
-> `/app` y `/conductor` responden 403. Para mostrar el piloto vacío puedes
-> poner `PROVISIONAL_ACCESS_ENABLED=true`. **No hay datos reales todavía; vuelve
-> a ponerlo en `false` antes de cargar cualquier dato.** La ruta `/up` (salud)
-> siempre responde.
+> **Acceso.** Todas las interfaces exigen sesión: quien no ha ingresado va a
+> `/ingreso`. La ruta `/up` (salud) siempre responde.
 
 ## 5. Comandos de compilación y despliegue
 
@@ -120,7 +121,13 @@ Deploy commands:
 
 ```bash
 php artisan migrate --force
+php artisan db:seed --class=ProductionSeeder --force
 ```
+
+- `ProductionSeeder` es idempotente: registra el catálogo de módulos, los
+  roles y los permisos declarados por cada módulo (lo mismo que
+  `php artisan permissions:sync`) y crea el super administrador si aún no
+  existe. Nunca crea empresas ni datos de prueba.
 
 - `composer install` ejecuta `package:discover` y `filament:upgrade`; este
   último publica los assets de Filament, que no están en el repositorio. Ambos
@@ -208,6 +215,25 @@ Sin el secreto, el job de despliegue termina con una advertencia y no despliega.
       GitHub (sección 8).
 - [ ] Push a `main` → CI en verde → despliegue → `https://<entorno>/up` responde 200.
 - [ ] Tras 15 minutos, el log muestra `Scheduler heartbeat`.
+- [ ] Super administrador creado y empresa piloto registrada (sección 10).
+
+## 10. Super administrador y empresa piloto
+
+1. Antes del primer despliegue define las variables `PLATFORM_ADMIN_*` de la
+   sección 4. El deploy command `db:seed --class=ProductionSeeder` crea la
+   cuenta (si ya existe, no la toca).
+2. Ingresa en `https://<entorno>/ingreso` con el número de documento y la
+   contraseña de `PLATFORM_ADMIN_PASSWORD`. El sistema obliga a cambiarla.
+3. **Borra `PLATFORM_ADMIN_PASSWORD`** de las variables del entorno y vuelve a
+   desplegar: ya no se necesita.
+4. En `/plataforma` → **Empresas** → **Crear**: registra la empresa piloto (NIT
+   con dígito de verificación). Se crea con su sede principal.
+5. En la empresa → **Licencias** → activa el módulo PESV (fechas y límites).
+6. **Crear administrador**: genera el primer `company_admin` y muestra su
+   contraseña temporal **una sola vez**. Entrégasela por un canal seguro.
+
+Los datos reales del piloto solo se cargan en producción, nunca en seeders,
+pruebas ni capturas.
 
 ## Referencias
 
