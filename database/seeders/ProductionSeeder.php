@@ -5,23 +5,24 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Modules\Core\Database\Seeders\DevelopmentSeeder;
 use Modules\Core\Database\Seeders\ModuleCatalogSeeder;
+use Modules\Core\Database\Seeders\PlatformAdminSeeder;
 use Modules\Core\Database\Seeders\RolesAndPermissionsSeeder;
 
 /**
- * Local development (`php artisan migrate:fresh --seed`): catalogue, roles,
- * permissions and fictitious companies and users. Production uses
- * ProductionSeeder instead.
+ * Production: only the module catalogue, roles, permissions and the platform
+ * administrator (PLATFORM_ADMIN_* variables). Safe to run on every deploy.
+ *
+ *   php artisan db:seed --class=ProductionSeeder --force
  */
-class DatabaseSeeder extends Seeder
+class ProductionSeeder extends Seeder
 {
     public function run(): void
     {
         $this->call([
             ModuleCatalogSeeder::class,
             RolesAndPermissionsSeeder::class,
-            DevelopmentSeeder::class,
+            PlatformAdminSeeder::class,
         ]);
     }
 }
