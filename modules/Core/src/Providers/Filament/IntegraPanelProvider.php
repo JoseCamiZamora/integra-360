@@ -2,13 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Providers\Filament;
+namespace Modules\Core\Providers\Filament;
 
-use App\Http\Middleware\EnsureProvisionalAccess;
-use App\Modules\ModuleServiceProvider;
 use App\Support\DesignTokens;
 use Filament\FontProviders\GoogleFontProvider;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
@@ -22,19 +21,20 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Modules\Core\Http\Middleware\EnsurePasswordIsChanged;
 
 /**
- * Administrative panel at /app. Modules add their own resources, pages,
- * widgets and navigation group from their service providers.
+ * Look and access shared by both panels (Opción A design system): dark
+ * sidebar with the logo, no topbar, no dark mode. The tenant switcher, the
+ * user menu and "Cerrar sesión" live in the sidebar.
+ *
+ * Neither panel has a login page: guests are sent to /ingreso.
  */
-class AdminPanelProvider extends PanelProvider
+abstract class IntegraPanelProvider extends PanelProvider
 {
-    public function panel(Panel $panel): Panel
+    protected function configure(Panel $panel): Panel
     {
         return $panel
-            ->default()
-            ->id(ModuleServiceProvider::ADMIN_PANEL_ID)
-            ->path('app')
             ->brandName(fn (): string => (string) config('app.name'))
             ->brandLogo(fn () => view('filament.brand'))
             ->brandLogoHeight('2.25rem')
@@ -58,9 +58,9 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
-            // Provisional gate until I360-01 adds ->login() and Authenticate.
             ->authMiddleware([
-                EnsureProvisionalAccess::class,
+                Authenticate::class,
+                EnsurePasswordIsChanged::class,
             ], isPersistent: true);
     }
 
