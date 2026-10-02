@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules;
 
+use Closure;
 use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +27,22 @@ abstract class ModuleServiceProvider extends ServiceProvider
     public const string ADMIN_PANEL_ID = 'admin';
 
     /**
+     * Extra route middleware for licensable modules (sign-in, active company,
+     * license check). Core sets it, so the Kernel does not depend on Core.
+     *
+     * @var (Closure(string): list<string>)|null
+     */
+    private static ?Closure $licensableRouteMiddleware = null;
+
+    /**
+     * @param  Closure(string): list<string>  $middleware  receives the module code
+     */
+    public static function guardLicensableRoutesWith(Closure $middleware): void
+    {
+        self::$licensableRouteMiddleware = $middleware;
+    }
+
+    /**
      * Module code as registered in config/modules.php (e.g. "pesv").
      * Also used as the view, translation, Livewire and navigation namespace.
      */
@@ -45,7 +62,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
         $this->loadTranslationsFrom($path.'/lang', $this->code());
 
         if (is_file($path.'/routes/web.php') && ! $this->app->routesAreCached()) {
-            Route::middleware('web')->group($path.'/routes/web.php');
+            Route::middleware(['web', ...$this->routeMiddleware()])->group($path.'/routes/web.php');
         }
 
         Livewire::addNamespace(
@@ -54,6 +71,35 @@ abstract class ModuleServiceProvider extends ServiceProvider
             classPath: $path.'/src/Livewire',
             classViewPath: $path.'/resources/views/livewire',
         );
+    }
+
+    /**
+     * The module's permissions: modules/<Module>/permissions.php, an array of
+     * "module.resource.action" => default roles. Registered by
+     * `php artisan permissions:sync`.
+     */
+    public function permissionsPath(): string
+    {
+        return $this->modulePath('permissions.php');
+    }
+
+    public function isLicensable(): bool
+    {
+        $registry = $this->app->make(ModuleRegistry::class);
+
+        return $registry->has($this->code()) && $registry->get($this->code())->licensable;
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function routeMiddleware(): array
+    {
+        if (! $this->isLicensable() || self::$licensableRouteMiddleware === null) {
+            return [];
+        }
+
+        return (self::$licensableRouteMiddleware)($this->code());
     }
 
     /**

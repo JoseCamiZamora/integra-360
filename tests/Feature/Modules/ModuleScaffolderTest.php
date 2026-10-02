@@ -38,6 +38,7 @@ it('creates a module with the standard structure', function (): void {
         ->toContain("return 'human-resources';")
         ->and(file_get_contents($path.'/lang/es/module.php'))->toContain("'name' => 'Human Resources'")
         ->and($path.'/routes/web.php')->toBeFile()
+        ->and(file_get_contents($path.'/permissions.php'))->toContain('human-resources.resource.action')
         ->and(file_get_contents($path.'/tests/Feature/ModuleTest.php'))->toContain('HumanResourcesServiceProvider');
 });
 

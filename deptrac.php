@@ -13,12 +13,13 @@ use Deptrac\Deptrac\Contract\Config\Ruleset;
 |--------------------------------------------------------------------------
 |
 | 1. Core depends on no module.
-| 2. Licensable modules depend on Core only through its Contracts, Models
-|    and Events.
+| 2. Licensable modules depend on Core only through its public API:
+|    Contracts, Models, Events, Enums and Licensing.
 | 3. A licensable module never depends on another licensable module.
 |
 | "Kernel" is the shared infrastructure in app/ (module base provider,
-| status badge, middleware); every module may use it, it uses no module.
+| status badge, multi-company scope); every module may use it, it uses no
+| module.
 |
 | One layer is created per folder in modules/, so modules generated with
 | `php artisan module:make` are covered without editing this file.
@@ -29,7 +30,9 @@ return static function (DeptracConfig $config): void {
     // ClassNameRegexConfig re-escapes backslashes, so namespace separators
     // are matched with a character class instead of an escaped backslash.
     $sep = '[^A-Za-z0-9_]';
-    $publicCoreApi = 'Contracts|Models|Events';
+    // I360-01 adds Enums (company roles, mission type...) and Licensing
+    // (ModuleAccess contract and the base policy of licensable modules).
+    $publicCoreApi = 'Contracts|Models|Events|Enums|Licensing';
 
     $kernel = Layer::withName('Kernel')
         ->collectors(ClassNameRegexConfig::create("/^App{$sep}/"));

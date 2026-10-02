@@ -14,13 +14,26 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
+            // Integer key on purpose (I360-01, decision 8): fewer frictions with
+            // Filament and spatie/laravel-permission. Every other table uses ULIDs.
+            // Modified in place instead of altered: nothing had been deployed.
             $table->id();
             $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
+            $table->string('document_type', 3);
+            $table->string('document_number', 20);
+            // Optional: many drivers have no e-mail. Unique when present.
+            $table->string('email')->nullable()->unique();
+            $table->string('phone', 20)->nullable();
             $table->string('password');
+            $table->boolean('must_change_password')->default(false);
+            // Platform owner only; never belongs to a company.
+            $table->boolean('is_platform_admin')->default(false);
+            $table->timestamp('last_login_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
+
+            $table->unique(['document_type', 'document_number']);
+            $table->index('document_number');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+|--------------------------------------------------------------------------
+| {{ name }} permissions
+|--------------------------------------------------------------------------
+|
+| permission name ("{{ code }}.resource.action") => roles that receive it
+| when the permission is first created by `php artisan permissions:sync`.
+|
+*/
+
+return [
+    //
+];

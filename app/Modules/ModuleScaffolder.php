@@ -45,6 +45,7 @@ final class ModuleScaffolder
         'provider.stub' => 'src/Providers/{{ module }}ServiceProvider.php',
         'routes.stub' => 'routes/web.php',
         'lang.stub' => 'lang/es/module.php',
+        'permissions.stub' => 'permissions.php',
         'test.stub' => 'tests/Feature/ModuleTest.php',
     ];
 
