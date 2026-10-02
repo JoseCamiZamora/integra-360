@@ -6,15 +6,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Provisional Access
+    | Platform Administrator
     |--------------------------------------------------------------------------
     |
-    | Until real authentication exists (I360-01), /app and /conductor are
-    | only reachable in local/testing environments or when this flag is on.
-    | Keep it false in production.
+    | The platform owner (super administrator), created by the production
+    | seeder (database/seeders/ProductionSeeder.php). Credentials come only
+    | from environment variables; the password must be changed at first
+    | sign-in.
     |
     */
 
-    'provisional_access' => (bool) env('PROVISIONAL_ACCESS_ENABLED', false),
+    'platform_admin' => [
+        'name' => env('PLATFORM_ADMIN_NAME'),
+        'document_type' => env('PLATFORM_ADMIN_DOCUMENT_TYPE', 'CC'),
+        'document_number' => env('PLATFORM_ADMIN_DOCUMENT_NUMBER'),
+        'email' => env('PLATFORM_ADMIN_EMAIL'),
+        'password' => env('PLATFORM_ADMIN_PASSWORD'),
+    ],
 
 ];
