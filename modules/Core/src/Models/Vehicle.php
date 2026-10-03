@@ -99,6 +99,11 @@ class Vehicle extends Model implements Documentable
         return $this->vehicle_type;
     }
 
+    public function demandsRequiredDocuments(): bool
+    {
+        return true;
+    }
+
     public function documentLabel(): string
     {
         return $this->plate;

@@ -37,6 +37,11 @@ return [
         'expired' => 'Vencido',
         'no_expiry' => 'Sin vencimiento',
     ],
+    'compliance_status' => [
+        'compliant' => 'Al día',
+        'expiring_soon' => 'Por vencer',
+        'non_compliant' => 'No cumple',
+    ],
     'vehicle_type' => [
         'tractocamion' => 'Tractocamión',
         'rigido' => 'Camión rígido',

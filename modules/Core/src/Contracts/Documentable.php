@@ -24,6 +24,12 @@ interface Documentable
     public function documentVehicleType(): ?VehicleType;
 
     /**
+     * Whether document types marked as required are demanded from this
+     * entity: always for vehicles; for people, only drivers.
+     */
+    public function demandsRequiredDocuments(): bool;
+
+    /**
      * Short label for screens and the audit log (plate, full name).
      */
     public function documentLabel(): string;

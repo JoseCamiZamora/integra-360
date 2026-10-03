@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Gate;
 use Modules\Core\Actions\ResolveHomeUrl;
 use Modules\Core\Console\SyncPermissionsCommand;
 use Modules\Core\Contracts\Documentable;
+use Modules\Core\Contracts\DocumentCompliance;
 use Modules\Core\Enums\DocumentAppliesTo;
 use Modules\Core\Http\Middleware\EnsureActiveCompany;
 use Modules\Core\Http\Middleware\EnsureModuleIsLicensed;
@@ -44,6 +45,8 @@ use Modules\Core\Policies\ExpiringDocumentFilePolicy;
 use Modules\Core\Policies\ExpiringDocumentPolicy;
 use Modules\Core\Policies\ModuleLicensePolicy;
 use Modules\Core\Policies\UserPolicy;
+use Modules\Core\Policies\VehiclePolicy;
+use Modules\Core\Services\DatabaseDocumentCompliance;
 use Modules\Core\Services\DatabaseModuleAccess;
 use Spatie\Activitylog\Actions\LogActivityAction;
 use Spatie\Activitylog\Contracts\Activity;
@@ -68,6 +71,7 @@ final class CoreServiceProvider extends ModuleServiceProvider
         ]);
 
         $this->app->scoped(ModuleAccess::class, DatabaseModuleAccess::class);
+        $this->app->bind(DocumentCompliance::class, DatabaseDocumentCompliance::class);
         $this->app->bind(LogoutResponseContract::class, LogoutResponse::class);
     }
 
@@ -118,6 +122,7 @@ final class CoreServiceProvider extends ModuleServiceProvider
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(ModuleLicense::class, ModuleLicensePolicy::class);
         Gate::policy(AuditEntry::class, AuditEntryPolicy::class);
+        Gate::policy(Vehicle::class, VehiclePolicy::class);
         Gate::policy(DocumentType::class, DocumentTypePolicy::class);
         Gate::policy(ExpiringDocument::class, ExpiringDocumentPolicy::class);
         Gate::policy(ExpiringDocumentFile::class, ExpiringDocumentFilePolicy::class);
