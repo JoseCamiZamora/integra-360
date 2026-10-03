@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Modules\Core\Database\Seeders\DevelopmentSeeder;
+use Modules\Core\Database\Seeders\DocumentTypeCatalogSeeder;
 use Modules\Core\Database\Seeders\ModuleCatalogSeeder;
 use Modules\Core\Database\Seeders\RolesAndPermissionsSeeder;
 
@@ -21,6 +22,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             ModuleCatalogSeeder::class,
             RolesAndPermissionsSeeder::class,
+            DocumentTypeCatalogSeeder::class,
             DevelopmentSeeder::class,
         ]);
     }
