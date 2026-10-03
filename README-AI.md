@@ -380,6 +380,9 @@ nunca un atajo que salte las políticas.
 | `core.users.view` | ✓ | ✓ | ✓ | | | ✓ |
 | `core.users.create/update/deactivate/reset-password` | ✓ | | | | | |
 | `core.audit.view` | ✓ | | | | | |
+| `core.vehicles.view` | ✓ | ✓ | ✓ | ✓ | | ✓ |
+| `core.vehicles.create/update` | ✓ | ✓ | | | | |
+| `core.vehicles.delete` | ✓ | | | | | |
 | `core.document-types.view/create/update` | ✓ | | | | | |
 | `core.documents.view` | ✓ | ✓ | ✓ | ✓ | | ✓ |
 | `core.documents.create/update/delete` | ✓ | ✓ | | | | |
@@ -429,6 +432,40 @@ en Core; los demás módulos los usan por sus contratos, modelos y eventos.
 | `ExpiringDocument` | `expiring_documents` | Empresa, ULID, borrado lógico. Polimórfico (`documentable`) con alias estables del *morph map* (`vehicle`; `person` en el bloque de personas). Un solo vigente por entidad y tipo (índice único sobre la columna virtual `current_marker`) |
 | `ExpiringDocumentFile` | `expiring_document_files` | Empresa. Hasta 4 por documento |
 
+### Vehículos
+
+- `CreateVehicle` y `UpdateVehicle` validan con `Support\VehicleInput`
+  (también lo usan las pantallas). Retirar es cambiar el estado a
+  `retired`: el vehículo y su historial se conservan.
+- **Placa:** se normaliza (mayúsculas, sin espacios, guiones ni puntos) y se
+  valida contra el formato del tipo de vehículo (`ValidPlate`). Los formatos
+  viven en `config/integra.php` → `plates`: `standard` `^[A-Z]{3}\d{3}$`
+  (por defecto), `motorcycle` `^[A-Z]{3}\d{2}[A-Z]$` (motocicleta) y
+  `trailer` `^[RS]\d{5}$` (semirremolque). Única por empresa
+  (`UniquePlate`, por el *scope*; el índice único es la garantía final).
+- `Rules\ExistsInActiveCompany`: reemplaza a la regla `exists` de Laravel
+  para claves de otros modelos de empresa (la de Laravel aceptaría una sede
+  de otra empresa).
+
+### Estado documental (`Contracts\DocumentCompliance`)
+
+- `forVehicle($vehicle, $at = null)` y `forVehicles($vehicles)` (listas y
+  tableros: dos consultas en total, sin importar cuántos vehículos).
+  `forPerson()` llega con las personas.
+- Devuelve un `Contracts\ComplianceReport`: `status`
+  (`Enums\ComplianceStatus`: `compliant` "Al día", `expiring_soon` "Por
+  vencer", `non_compliant` "No cumple"), `expired`, `expiringSoon`,
+  `missing` (tipos obligatorios sin documento vigente) y `blocksOperation`
+  (falta o está vencido un tipo que bloquea la operación).
+- Reglas: solo cuentan los documentos vigentes (no los renovados ni los
+  borrados) de tipos activos que aplican a la entidad. Un documento opcional
+  vencido también deja la entidad en "No cumple". Los tipos obligatorios se
+  exigen según `Documentable::demandsRequiredDocuments()` (vehículos
+  siempre; personas, solo conductores).
+- Implementación interna: `Services\DatabaseDocumentCompliance`. Pesv usa
+  solo el contrato (verificado con Deptrac: importar la implementación es
+  una violación).
+
 ### Documentos
 
 - **Registrar** (`RegisterExpiringDocument`): el tipo debe aplicar a la
@@ -472,7 +509,9 @@ crea los códigos que faltan; no toca los editados.
 ### API pública de Core para otros módulos
 
 - `Contracts\Documentable`: entidad con documentos (`documentSubject()`,
-  `documentVehicleType()`, `documentLabel()`, `documents()`).
+  `documentVehicleType()`, `demandsRequiredDocuments()`, `documentLabel()`,
+  `documents()`).
+- `Contracts\DocumentCompliance` y `Contracts\ComplianceReport` (arriba).
 - `Events\ExpiringDocumentRegistered` (documento, entidad) y
   `Events\ExpiringDocumentRenewed` (nuevo, anterior, entidad). Se despachan
   después del *commit* y llevan `companyId` para que un oyente en cola abra
@@ -480,8 +519,8 @@ crea los códigos que faltan; no toca los editados.
 
 ## 12. Pendientes conocidos
 
-- **I360-02 (en curso):** estado documental (`DocumentCompliance`),
-  personas y conductores, asignaciones, límites de licencia y pantallas.
+- **I360-02 (en curso):** personas y conductores, asignaciones, límites de
+  licencia y pantallas.
 - Vincular una cuenta existente a otra empresa (consultores): hoy un documento
   ya registrado se rechaza para no mostrar datos personales entre empresas;
   lo hará el super administrador en un prompt posterior.
