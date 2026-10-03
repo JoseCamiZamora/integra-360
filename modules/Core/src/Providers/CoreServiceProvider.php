@@ -7,6 +7,8 @@ namespace Modules\Core\Providers;
 use App\Modules\ModuleServiceProvider;
 use App\Support\Tenancy\CompanyContext;
 use Filament\Auth\Http\Responses\Contracts\LogoutResponse as LogoutResponseContract;
+use Filament\Navigation\NavigationGroup;
+use Filament\Panel;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
@@ -21,6 +23,7 @@ use Modules\Core\Console\SyncPermissionsCommand;
 use Modules\Core\Contracts\Documentable;
 use Modules\Core\Contracts\DocumentCompliance;
 use Modules\Core\Enums\DocumentAppliesTo;
+use Modules\Core\Filament\Support\ComplianceBadges;
 use Modules\Core\Http\Middleware\EnsureActiveCompany;
 use Modules\Core\Http\Middleware\EnsureModuleIsLicensed;
 use Modules\Core\Http\Middleware\EnsurePasswordIsChanged;
@@ -40,6 +43,7 @@ use Modules\Core\Models\Person;
 use Modules\Core\Models\User;
 use Modules\Core\Models\Vehicle;
 use Modules\Core\Models\VehicleAssignment;
+use Modules\Core\Models\VehicleTypeLicenseCategory;
 use Modules\Core\Policies\AuditEntryPolicy;
 use Modules\Core\Policies\BranchPolicy;
 use Modules\Core\Policies\CompanyPolicy;
@@ -52,6 +56,7 @@ use Modules\Core\Policies\PersonPolicy;
 use Modules\Core\Policies\UserPolicy;
 use Modules\Core\Policies\VehicleAssignmentPolicy;
 use Modules\Core\Policies\VehiclePolicy;
+use Modules\Core\Policies\VehicleTypeLicenseCategoryPolicy;
 use Modules\Core\Services\DatabaseDocumentCompliance;
 use Modules\Core\Services\DatabaseModuleAccess;
 use Spatie\Activitylog\Actions\LogActivityAction;
@@ -64,9 +69,26 @@ final class CoreServiceProvider extends ModuleServiceProvider
         return 'core';
     }
 
+    /**
+     * Navigation group of the operational screens (people, vehicles,
+     * documents), before Core's own group; resources declare
+     * `$navigationGroup = CoreServiceProvider::OPERATION_GROUP`.
+     */
+    public const string OPERATION_GROUP = 'operation';
+
     public function register(): void
     {
+        Panel::configureUsing(function (Panel $panel): void {
+            if ($panel->getId() === ModuleServiceProvider::ADMIN_PANEL_ID) {
+                $panel->navigationGroups([
+                    self::OPERATION_GROUP => NavigationGroup::make()->label(fn (): string => __('core::module.operation')),
+                ]);
+            }
+        });
+
         parent::register();
+
+        $this->app->scoped(ComplianceBadges::class);
 
         CompanyContext::useCompanyModel(Company::class);
 
@@ -133,6 +155,7 @@ final class CoreServiceProvider extends ModuleServiceProvider
         Gate::policy(Driver::class, DriverPolicy::class);
         Gate::policy(Vehicle::class, VehiclePolicy::class);
         Gate::policy(VehicleAssignment::class, VehicleAssignmentPolicy::class);
+        Gate::policy(VehicleTypeLicenseCategory::class, VehicleTypeLicenseCategoryPolicy::class);
         Gate::policy(DocumentType::class, DocumentTypePolicy::class);
         Gate::policy(ExpiringDocument::class, ExpiringDocumentPolicy::class);
         Gate::policy(ExpiringDocumentFile::class, ExpiringDocumentFilePolicy::class);
