@@ -6,6 +6,7 @@ use App\Modules\ModuleRegistry;
 use App\Modules\ModuleServiceProvider;
 use App\Support\Tenancy\CompanyContext;
 use Filament\Facades\Filament;
+use Illuminate\Http\UploadedFile;
 use Modules\Core\Actions\CreateCompany;
 use Modules\Core\Actions\SyncPermissions;
 use Modules\Core\Actions\SyncUserRoles;
@@ -108,6 +109,32 @@ function actingInPanel(User $user, Company $company): void
     // Each Livewire test update is a request that clears the context when it
     // ends; in the browser the persistent tenant middleware sets it again.
     app()->terminating(fn () => CompanyContext::activate($company));
+}
+
+/**
+ * A real uploaded file (unlike UploadedFile::fake(), whose MIME type comes
+ * from the extension): the type is detected from the content, as in
+ * production.
+ */
+function uploadedFile(string $name, string $content): UploadedFile
+{
+    $path = tempnam(sys_get_temp_dir(), 'i360');
+    file_put_contents($path, $content);
+
+    return new UploadedFile($path, $name, null, null, true);
+}
+
+function pdfContent(): string
+{
+    return "%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF\n";
+}
+
+/**
+ * A 1×1 PNG.
+ */
+function pngContent(): string
+{
+    return (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
 }
 
 /**
