@@ -23,6 +23,7 @@ enum AuditEvent: string
     case RoleAssigned = 'role_assigned';
     case RoleRemoved = 'role_removed';
     case ScopeBypassed = 'scope_bypassed';
+    case DocumentRenewed = 'document_renewed';
 
     public function label(): string
     {

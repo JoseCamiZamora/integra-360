@@ -41,6 +41,7 @@ return [
         'role_assigned' => 'Rol asignado',
         'role_removed' => 'Rol retirado',
         'scope_bypassed' => 'Consulta entre empresas',
+        'document_renewed' => 'Renovación de documento',
     ],
     'subjects' => [
         'Company' => 'Empresa',
@@ -48,5 +49,8 @@ return [
         'User' => 'Usuario',
         'Membership' => 'Membresía',
         'ModuleLicense' => 'Licencia',
+        'vehicle' => 'Vehículo',
+        'DocumentType' => 'Tipo de documento',
+        'ExpiringDocument' => 'Documento',
     ],
 ];
