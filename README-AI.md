@@ -402,8 +402,9 @@ formato que valida `permissions:sync`.
 ### Licencias
 
 - `Modules\Core\Licensing\ModuleAccess` (API pública): `level()`,
-  `isEnabled()` (puede leer), `canWrite()`, `limits()`, `currentLevel()` y
-  `companiesWithWriteAccess()` (para tareas programadas).
+  `isEnabled()` (puede leer), `canWrite()`, `limits()`, `currentLevel()`,
+  `companiesWithWriteAccess()` (para tareas programadas) y, desde I360-02,
+  `effectiveLimits()`, `operationalLevel()` y `currentOperationalLevel()`.
 - Niveles: **activa** (dentro de fechas), **solo consulta** (vencida hace 30
   días o menos), **sin acceso** (sin licencia, inactiva, no iniciada o pasado
   el plazo). Core siempre está activo. Los datos nunca se borran.
@@ -413,8 +414,25 @@ formato que valida `permissions:sync`.
   (lectura = puede leer + permiso `.view`; escritura = activa + permiso).
 - Tareas programadas: iterar `companiesWithWriteAccess('<codigo>')` y trabajar
   dentro de `CompanyContext::run()`.
-- Límites de vehículos y personas: solo consulta (`ModuleLimits`); se aplican
-  al crear registros en I360-02. Cobro manual, sin pasarela.
+- **Límite efectivo** de vehículos y personas (`effectiveLimits()`): entre
+  las licencias activas y vigentes de módulos licenciables de la empresa, si
+  alguna tiene el límite nulo no hay límite; si no, el mayor. Cada límite por
+  separado. Sin ninguna licencia licenciable vigente, no hay límite.
+- Se aplica solo al **agregar** (`Support\OperationalLimits`, con la fila de
+  la empresa bloqueada): crear, restaurar o reactivar un vehículo o una
+  persona. Cuentan los vehículos no retirados ni borrados y las personas
+  activas. Editar, retirar y consultar siguen funcionando, y bajar un límite
+  nunca oculta ni borra nada.
+- **Datos operativos de Core** (personas, vehículos, documentos,
+  asignaciones, tipos de documento de la empresa): `operationalLevel()` es
+  `full` si algún módulo licenciable está activo o si la empresa no tiene
+  licencias licenciables (en configuración); si las tiene y ninguna está
+  activa, `read_only` (también pasados los 30 días: los datos nunca se
+  ocultan). Las *policies* de escritura lo exigen
+  (`Policies\Concerns\ChecksOperationalWriteAccess`), así que las pantallas
+  ocultan las acciones de escritura y las rechazan si una petición de
+  Livewire las llama igual.
+- Cobro manual, sin pasarela.
 
 ### Auditoría
 
@@ -575,8 +593,8 @@ crea los códigos que faltan; no toca los editados.
 
 ## 12. Pendientes conocidos
 
-- **I360-02 (en curso):** límites de
-  licencia y pantallas.
+- **I360-02 (en curso):** pantallas, vista del conductor y
+  datos de prueba.
 - Vincular una cuenta existente a otra empresa (consultores): hoy un documento
   ya registrado se rechaza para no mostrar datos personales entre empresas;
   lo hará el super administrador en un prompt posterior.
