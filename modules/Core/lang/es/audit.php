@@ -52,6 +52,8 @@ return [
         'vehicle' => 'Vehículo',
         'person' => 'Persona',
         'Driver' => 'Conductor',
+        'VehicleAssignment' => 'Asignación de vehículo',
+        'VehicleTypeLicenseCategory' => 'Categoría de licencia por tipo de vehículo',
         'DocumentType' => 'Tipo de documento',
         'ExpiringDocument' => 'Documento',
     ],

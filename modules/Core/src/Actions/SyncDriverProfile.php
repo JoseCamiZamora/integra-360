@@ -12,8 +12,8 @@ use Modules\Core\Support\PersonInput;
 /**
  * Creates, updates or removes the driver profile of a person.
  *
- * - Removing soft deletes it (assignments keep their history); adding it
- *   again restores the same profile.
+ * - Removing soft deletes it and closes its current assignment (the history
+ *   is kept); adding it again restores the same profile.
  * - If the person has a user account, the "driver" role follows the profile
  *   in the active company (other roles are kept), so /conductor matches.
  */
@@ -21,6 +21,7 @@ final class SyncDriverProfile
 {
     public function __construct(
         private readonly SyncUserRoles $syncRoles,
+        private readonly EndCurrentAssignments $endAssignments,
     ) {}
 
     /**
@@ -32,6 +33,7 @@ final class SyncDriverProfile
 
         if ($data === null) {
             if ($driver instanceof Driver && ! $driver->trashed()) {
+                $this->endAssignments->handle($driver);
                 $driver->delete();
             }
 

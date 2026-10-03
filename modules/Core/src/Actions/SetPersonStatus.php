@@ -14,10 +14,14 @@ use Modules\Core\Models\Person;
  * deleted. If the person has a user account, their membership in the active
  * company follows: deactivated with the person and reactivated with them
  * (reversible). Both changes go to the audit log; access to other companies
- * is untouched.
+ * is untouched. Retiring a driver also closes their current assignment.
  */
 final class SetPersonStatus
 {
+    public function __construct(
+        private readonly EndCurrentAssignments $endAssignments,
+    ) {}
+
     public function handle(Person $person, PersonStatus $status): Person
     {
         if ($person->status === $status) {
@@ -35,6 +39,12 @@ final class SetPersonStatus
                     $membership->is_active = $status === PersonStatus::Active;
                     $membership->save();
                 }
+            }
+
+            // Someone who left drives no vehicle; reactivating does not
+            // restore it (the assignment is decided again).
+            if ($status === PersonStatus::Inactive && $person->driver !== null) {
+                $this->endAssignments->handle($person->driver);
             }
 
             return $person;

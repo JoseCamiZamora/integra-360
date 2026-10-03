@@ -59,6 +59,11 @@ return [
     'core.vehicles.update' => ['company_admin', 'pesv_leader'],
     'core.vehicles.delete' => ['company_admin'],
 
+    // Vehicle assignments (closing = update; never deleted).
+    'core.assignments.view' => $panelRoles,
+    'core.assignments.create' => ['company_admin', 'pesv_leader'],
+    'core.assignments.update' => ['company_admin', 'pesv_leader'],
+
     // Document types of the company (global types: platform administrator).
     'core.document-types.view' => ['company_admin'],
     'core.document-types.create' => ['company_admin'],

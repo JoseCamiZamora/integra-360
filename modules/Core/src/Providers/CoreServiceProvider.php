@@ -39,6 +39,7 @@ use Modules\Core\Models\ModuleLicense;
 use Modules\Core\Models\Person;
 use Modules\Core\Models\User;
 use Modules\Core\Models\Vehicle;
+use Modules\Core\Models\VehicleAssignment;
 use Modules\Core\Policies\AuditEntryPolicy;
 use Modules\Core\Policies\BranchPolicy;
 use Modules\Core\Policies\CompanyPolicy;
@@ -49,6 +50,7 @@ use Modules\Core\Policies\ExpiringDocumentPolicy;
 use Modules\Core\Policies\ModuleLicensePolicy;
 use Modules\Core\Policies\PersonPolicy;
 use Modules\Core\Policies\UserPolicy;
+use Modules\Core\Policies\VehicleAssignmentPolicy;
 use Modules\Core\Policies\VehiclePolicy;
 use Modules\Core\Services\DatabaseDocumentCompliance;
 use Modules\Core\Services\DatabaseModuleAccess;
@@ -130,6 +132,7 @@ final class CoreServiceProvider extends ModuleServiceProvider
         Gate::policy(Person::class, PersonPolicy::class);
         Gate::policy(Driver::class, DriverPolicy::class);
         Gate::policy(Vehicle::class, VehiclePolicy::class);
+        Gate::policy(VehicleAssignment::class, VehicleAssignmentPolicy::class);
         Gate::policy(DocumentType::class, DocumentTypePolicy::class);
         Gate::policy(ExpiringDocument::class, ExpiringDocumentPolicy::class);
         Gate::policy(ExpiringDocumentFile::class, ExpiringDocumentFilePolicy::class);
@@ -197,11 +200,24 @@ final class CoreServiceProvider extends ModuleServiceProvider
             $subject instanceof ModuleLicense => $subject->module_code,
             $subject instanceof Vehicle => $subject->plate,
             $subject instanceof Person => $subject->full_name,
+            $subject instanceof VehicleAssignment => $this->assignmentAuditLabel($subject),
             $subject instanceof Driver => Person::query()->withTrashed()->find($subject->person_id)?->full_name,
             $subject instanceof DocumentType => $subject->name,
             $subject instanceof ExpiringDocument => $this->documentAuditLabel($subject),
             default => null,
         };
+    }
+
+    /**
+     * "TST001 · Ana Prueba": plate and driver.
+     */
+    private function assignmentAuditLabel(VehicleAssignment $assignment): string
+    {
+        $plate = Vehicle::query()->withTrashed()->find($assignment->vehicle_id)?->plate;
+        $personId = Driver::query()->withTrashed()->find($assignment->driver_id)?->person_id;
+        $driver = $personId === null ? null : Person::query()->withTrashed()->find($personId)?->full_name;
+
+        return trim(($plate ?? '').' · '.($driver ?? ''), ' ·');
     }
 
     /**
