@@ -6,11 +6,14 @@ namespace Modules\Core\Models;
 
 use App\Support\Tenancy\BelongsToCompany;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -79,6 +82,39 @@ class Vehicle extends Model implements Documentable
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    /**
+     * @return HasMany<VehicleAssignment, $this>
+     */
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(VehicleAssignment::class);
+    }
+
+    /**
+     * @return HasOne<VehicleAssignment, $this>
+     */
+    public function currentAssignment(): HasOne
+    {
+        return $this->hasOne(VehicleAssignment::class)->whereNull('ends_at');
+    }
+
+    public function isRetired(): bool
+    {
+        return $this->status === VehicleStatus::Retired;
+    }
+
+    /**
+     * Vehicles that count for the license limits: not retired (deleted ones
+     * are already excluded by the soft delete scope).
+     *
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeInService(Builder $query): Builder
+    {
+        return $query->where('status', '!=', VehicleStatus::Retired->value);
     }
 
     /**

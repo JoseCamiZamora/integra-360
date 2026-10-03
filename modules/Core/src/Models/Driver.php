@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Modules\Core\Database\Factories\DriverFactory;
@@ -50,6 +52,22 @@ class Driver extends Model
     public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
+    }
+
+    /**
+     * @return HasMany<VehicleAssignment, $this>
+     */
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(VehicleAssignment::class);
+    }
+
+    /**
+     * @return HasOne<VehicleAssignment, $this>
+     */
+    public function currentAssignment(): HasOne
+    {
+        return $this->hasOne(VehicleAssignment::class)->whereNull('ends_at');
     }
 
     /**
