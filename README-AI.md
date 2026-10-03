@@ -388,6 +388,8 @@ nunca un atajo que salte las políticas.
 | `core.vehicles.view` | ✓ | ✓ | ✓ | ✓ | | ✓ |
 | `core.vehicles.create/update` | ✓ | ✓ | | | | |
 | `core.vehicles.delete` | ✓ | | | | | |
+| `core.assignments.view` | ✓ | ✓ | ✓ | ✓ | | ✓ |
+| `core.assignments.create/update` | ✓ | ✓ | | | | |
 | `core.document-types.view/create/update` | ✓ | | | | | |
 | `core.documents.view` | ✓ | ✓ | ✓ | ✓ | | ✓ |
 | `core.documents.create/update/delete` | ✓ | ✓ | | | | |
@@ -435,6 +437,8 @@ en Core; los demás módulos los usan por sus contratos, modelos y eventos.
 | `Person` | `people` | Empresa, ULID, borrado lógico. Documento normalizado, único por empresa y tipo entre las no borradas (`live_document_number`). `user_id` opcional y único. Estado `active` / `inactive` (retirada). Sin datos de salud, fotos ni familiares (Ley 1581) |
 | `Driver` | `drivers` | Empresa. Perfil 1:1 de una persona (`person_id` único): licencia y categoría. La vigencia de la licencia es un `ExpiringDocument`. Se borra lógicamente al dejar de conducir y se restaura si vuelve |
 | `Vehicle` | `vehicles` | Empresa, ULID, borrado lógico. Placa normalizada (mayúsculas, sin espacios ni guiones), única por empresa entre los no borrados (columna virtual `live_plate`) |
+| `VehicleAssignment` | `vehicle_assignments` | Empresa, ULID. Vehículo ↔ conductor; `ends_at` nulo = vigente. Un vigente por vehículo y uno por conductor (índices únicos sobre columnas virtuales). Nunca se edita ni se borra: es el historial |
+| `VehicleTypeLicenseCategory` | `vehicle_type_license_categories` | Global (de la plataforma). Categorías de licencia permitidas por tipo de vehículo; dato editable, sembrado "por validar con la empresa piloto" |
 | `DocumentType` | `document_types` | Catálogo configurable (`BelongsToCompanyOrGlobal`): `company_id` nulo = global. `code` único entre los globales y dentro de cada empresa. Se desactiva, nunca se borra |
 | `ExpiringDocument` | `expiring_documents` | Empresa, ULID, borrado lógico. Polimórfico (`documentable`) con alias estables del *morph map* (`person`, `vehicle`). Un solo vigente por entidad y tipo (índice único sobre la columna virtual `current_marker`) |
 | `ExpiringDocumentFile` | `expiring_document_files` | Empresa. Hasta 4 por documento |
@@ -473,6 +477,31 @@ en Core; los demás módulos los usan por sus contratos, modelos y eventos.
 - `Rules\ExistsInActiveCompany`: reemplaza a la regla `exists` de Laravel
   para claves de otros modelos de empresa (la de Laravel aceptaría una sede
   de otra empresa).
+
+### Asignaciones de vehículo
+
+- `AssignVehicle`: cierra la asignación vigente del vehículo y la del
+  conductor (la pantalla lo confirma con `Support\AssignmentCheck`) y crea
+  la nueva; el historial se conserva. Bloquea las filas para que dos
+  asignaciones simultáneas no pasen las validaciones a la vez.
+- No se asigna un vehículo retirado o borrado, a quien no tiene perfil de
+  conductor ni a una persona retirada.
+- **Categoría de licencia:** si la del conductor no está en
+  `vehicle_type_license_categories` para el tipo de vehículo, se **advierte**
+  (`AssignmentResult::$licenseWarning`), nunca se bloquea.
+  `LicenseCategoryEquivalenceSeeder` siembra la tabla solo si está vacía
+  (corre en cada despliegue y no debe deshacer cambios). Valores iniciales:
+  moto A1/A2; automóvil y camioneta B1-B3, C1-C3; microbús B2, B3, C1-C3;
+  buseta, bus, rígido y volqueta B2, B3, C2, C3; tractocamión y
+  semirremolque B3, C3. **Por validar con la empresa piloto.**
+- Se cierran solas (`EndCurrentAssignments`) al retirar o borrar el vehículo,
+  al retirar a la persona y al quitarle el perfil de conductor. Reactivar no
+  restaura la asignación.
+- Auditoría: cada asignación (`created`) y cada cierre (`updated` de
+  `ends_at`), con la etiqueta "placa · conductor".
+- Las acciones que relacionan registros (`AssignVehicle`,
+  `RegisterExpiringDocument`, `CreatePersonAccess`) comprueban que todos sean
+  de la empresa activa aunque el modelo se haya cargado por otra vía.
 
 ### Estado documental (`Contracts\DocumentCompliance`)
 
@@ -546,7 +575,7 @@ crea los códigos que faltan; no toca los editados.
 
 ## 12. Pendientes conocidos
 
-- **I360-02 (en curso):** asignaciones, límites de
+- **I360-02 (en curso):** límites de
   licencia y pantallas.
 - Vincular una cuenta existente a otra empresa (consultores): hoy un documento
   ya registrado se rechaza para no mostrar datos personales entre empresas;
