@@ -4,7 +4,7 @@ Este documento es la fuente de contexto para cualquier IA (o persona) que
 trabaje en el proyecto. **Léelo completo antes de cambiar código y actualízalo
 en cada prompt (I360-xx) que cambie algo de lo que aquí se describe.**
 
-Última actualización: I360-02 · Entidades operativas, en curso (octubre de 2026).
+Última actualización: I360-02 · Entidades operativas (octubre de 2026).
 
 ## 1. Propósito del producto
 
@@ -591,10 +591,58 @@ crea los códigos que faltan; no toca los editados.
   después del *commit* y llevan `companyId` para que un oyente en cola abra
   `CompanyContext::run()`. Los consumirá I360-03 (alertas).
 
+### Pantallas
+
+- **Panel `/app`, grupo "Operación"** (`CoreServiceProvider::OPERATION_GROUP`,
+  antes de "Núcleo"): Personas, Vehículos, Documentos y Tipos de documento.
+  Los recursos guardan con las acciones de Core (crean y editan a través de
+  ellas); `Filament\Support\ActionErrors` muestra los errores de las acciones
+  junto al campo o, si no son de un campo (límite de licencia, solo
+  consulta), como notificación.
+- **Personas:** búsqueda por nombre o documento, filtro por estado (activas
+  por defecto) y por conductores, perfil de conductor en el formulario,
+  Crear acceso al sistema, Retirar/Reactivar y pestaña de documentos.
+- **Vehículos:** placa, tipo, conductor actual, estado e insignia de estado
+  documental (`Filament\Support\ComplianceBadges`: una sola evaluación por
+  petición para toda la lista); pestañas de documentos e historial de
+  asignaciones; acción "Asignar conductor", cuyo modal dice qué asignaciones
+  se cerrarán y la advertencia de licencia antes de confirmar.
+- **Documentos:** todos los de la empresa, primero los que vencen antes (sin
+  vencimiento al final), con filtros por estado, tipo, a quién pertenecen y
+  "vencen en los próximos 30 días"; registrar, renovar, corregir, abrir
+  archivos y borrar (lógico). Carga de hasta 4 PDF o fotos; en el celular el
+  selector ofrece la cámara (sin `capture`, para no impedir PDF o galería).
+- **Tipos de documento:** la empresa ve los globales (solo lectura) y
+  administra los propios (`company_admin`).
+- **Panel `/plataforma`:** tipos de documento globales y "Categorías de
+  licencia por tipo de vehículo" (solo el super administrador).
+- **Vista `/conductor`:** tarjeta del vehículo asignado (placa, tipo, marca y
+  línea) con el estado documental del vehículo y del conductor y la lista de
+  documentos vencidos, por vencer o faltantes (solo nombres; nunca números
+  ni archivos). Sin asignación: "Aún no tienes un vehículo asignado. Avisa a
+  tu administrador.". Botón "Iniciar inspección" deshabilitado con su
+  explicación hasta I360-05. Sin JavaScript adicional al de Livewire.
+- **Solo consulta:** con las licencias vencidas las pantallas siguen
+  mostrando todo, ocultan las acciones de escritura y las rechazan si una
+  petición de Livewire las invoca igual (`VehicleScreensTest`, con control
+  positivo).
+
+### Datos de prueba (`OperationDevelopmentSeeder`, solo desarrollo)
+
+Empresa ficticia "Cordillera Carga": 6 vehículos `TST001`–`TST006` (3
+tractocamiones, 2 rígidos, 1 volqueta) y 8 personas, 6 conductoras con
+vehículo salvo una. Documentos vigentes, por vencer en 10 días, vencidos y
+faltantes; Diana (C1) tiene un rígido para ver la advertencia de licencia.
+La cuenta de conductor `1010000050` es la persona de `TST001`. Producción
+solo siembra los tipos de documento globales y las categorías de licencia.
+
 ## 12. Pendientes conocidos
 
-- **I360-02 (en curso):** pantallas, vista del conductor y
-  datos de prueba.
+- Validar con la empresa piloto: nombres y obligatoriedad de los tipos de
+  documento sembrados, la tabla de categorías de licencia por tipo de
+  vehículo, qué documentos se exigen a quienes no conducen y si la
+  asignación de vehículo es fija o diaria (se ajusta en I360-05).
+- Purga de documentos pasados los 5 años de retención (prompt posterior).
 - Vincular una cuenta existente a otra empresa (consultores): hoy un documento
   ya registrado se rechaza para no mostrar datos personales entre empresas;
   lo hará el super administrador en un prompt posterior.
