@@ -219,9 +219,9 @@ describe('audit log', function (): void {
             ->and($renewal->properties['previous_id'])->toBe($first->getKey())
             ->and($renewal->properties['subject_label'])->toBe('SOAT · TST001');
 
-        $logged = $entries->map(fn (AuditEntry $entry): string => json_encode($entry->properties))->implode(' ');
+        $logged = $entries->map(fn (AuditEntry $entry): string => json_encode([$entry->properties, $entry->attribute_changes]))->implode(' ');
 
-        expect($logged)->not->toContain('AT-1234567')
+        expect($logged)->toContain('2027-01-14')->not->toContain('AT-1234567')
             ->not->toContain('AT-999')
             ->not->toContain('Observación privada');
     });
