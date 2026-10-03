@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Services;
 
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Modules\Core\Contracts\ComplianceReport;
@@ -13,6 +14,7 @@ use Modules\Core\Contracts\DocumentCompliance;
 use Modules\Core\Enums\DocumentStatus;
 use Modules\Core\Models\DocumentType;
 use Modules\Core\Models\ExpiringDocument;
+use Modules\Core\Models\Person;
 use Modules\Core\Models\Vehicle;
 
 /**
@@ -30,6 +32,19 @@ final class DatabaseDocumentCompliance implements DocumentCompliance
     public function forVehicles(Collection $vehicles, ?CarbonInterface $at = null): array
     {
         return $this->forEntities($vehicles, $at);
+    }
+
+    public function forPerson(Person $person, ?CarbonInterface $at = null): ComplianceReport
+    {
+        return $this->forPeople(collect([$person]), $at)[$person->getKey()];
+    }
+
+    /**
+     * One more query to know who drives (required documents).
+     */
+    public function forPeople(Collection $people, ?CarbonInterface $at = null): array
+    {
+        return $this->forEntities((new EloquentCollection($people->all()))->loadMissing('driver'), $at);
     }
 
     /**

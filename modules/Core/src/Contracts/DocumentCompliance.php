@@ -6,6 +6,7 @@ namespace Modules\Core\Contracts;
 
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
+use Modules\Core\Models\Person;
 use Modules\Core\Models\Vehicle;
 
 /**
@@ -18,6 +19,17 @@ use Modules\Core\Models\Vehicle;
 interface DocumentCompliance
 {
     public function forVehicle(Vehicle $vehicle, ?CarbonInterface $at = null): ComplianceReport;
+
+    /**
+     * Required person documents are only demanded from drivers.
+     */
+    public function forPerson(Person $person, ?CarbonInterface $at = null): ComplianceReport;
+
+    /**
+     * @param  Collection<int, Person>  $people
+     * @return array<string, ComplianceReport>
+     */
+    public function forPeople(Collection $people, ?CarbonInterface $at = null): array;
 
     /**
      * One report per vehicle, keyed by vehicle id, without one query per

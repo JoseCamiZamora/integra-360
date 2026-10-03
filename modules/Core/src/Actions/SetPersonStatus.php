@@ -1,0 +1,43 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Core\Actions;
+
+use Illuminate\Support\Facades\DB;
+use Modules\Core\Enums\PersonStatus;
+use Modules\Core\Models\Membership;
+use Modules\Core\Models\Person;
+
+/**
+ * Marks a person as active or inactive (left the company). Nothing is
+ * deleted. If the person has a user account, their membership in the active
+ * company follows: deactivated with the person and reactivated with them
+ * (reversible). Both changes go to the audit log; access to other companies
+ * is untouched.
+ */
+final class SetPersonStatus
+{
+    public function handle(Person $person, PersonStatus $status): Person
+    {
+        if ($person->status === $status) {
+            return $person;
+        }
+
+        return DB::transaction(function () use ($person, $status): Person {
+            $person->status = $status;
+            $person->save();
+
+            if ($person->user_id !== null) {
+                $membership = Membership::query()->where('user_id', $person->user_id)->first();
+
+                if ($membership instanceof Membership) {
+                    $membership->is_active = $status === PersonStatus::Active;
+                    $membership->save();
+                }
+            }
+
+            return $person;
+        });
+    }
+}

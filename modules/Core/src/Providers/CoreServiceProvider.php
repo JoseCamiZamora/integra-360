@@ -31,19 +31,23 @@ use Modules\Core\Models\AuditEntry;
 use Modules\Core\Models\Branch;
 use Modules\Core\Models\Company;
 use Modules\Core\Models\DocumentType;
+use Modules\Core\Models\Driver;
 use Modules\Core\Models\ExpiringDocument;
 use Modules\Core\Models\ExpiringDocumentFile;
 use Modules\Core\Models\Membership;
 use Modules\Core\Models\ModuleLicense;
+use Modules\Core\Models\Person;
 use Modules\Core\Models\User;
 use Modules\Core\Models\Vehicle;
 use Modules\Core\Policies\AuditEntryPolicy;
 use Modules\Core\Policies\BranchPolicy;
 use Modules\Core\Policies\CompanyPolicy;
 use Modules\Core\Policies\DocumentTypePolicy;
+use Modules\Core\Policies\DriverPolicy;
 use Modules\Core\Policies\ExpiringDocumentFilePolicy;
 use Modules\Core\Policies\ExpiringDocumentPolicy;
 use Modules\Core\Policies\ModuleLicensePolicy;
+use Modules\Core\Policies\PersonPolicy;
 use Modules\Core\Policies\UserPolicy;
 use Modules\Core\Policies\VehiclePolicy;
 use Modules\Core\Services\DatabaseDocumentCompliance;
@@ -102,6 +106,7 @@ final class CoreServiceProvider extends ModuleServiceProvider
     private function registerMorphMap(): void
     {
         Relation::morphMap([
+            DocumentAppliesTo::Person->value => Person::class,
             DocumentAppliesTo::Vehicle->value => Vehicle::class,
         ]);
     }
@@ -122,6 +127,8 @@ final class CoreServiceProvider extends ModuleServiceProvider
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(ModuleLicense::class, ModuleLicensePolicy::class);
         Gate::policy(AuditEntry::class, AuditEntryPolicy::class);
+        Gate::policy(Person::class, PersonPolicy::class);
+        Gate::policy(Driver::class, DriverPolicy::class);
         Gate::policy(Vehicle::class, VehiclePolicy::class);
         Gate::policy(DocumentType::class, DocumentTypePolicy::class);
         Gate::policy(ExpiringDocument::class, ExpiringDocumentPolicy::class);
@@ -189,6 +196,8 @@ final class CoreServiceProvider extends ModuleServiceProvider
             $subject instanceof Membership => User::query()->find($subject->user_id)?->name,
             $subject instanceof ModuleLicense => $subject->module_code,
             $subject instanceof Vehicle => $subject->plate,
+            $subject instanceof Person => $subject->full_name,
+            $subject instanceof Driver => Person::query()->withTrashed()->find($subject->person_id)?->full_name,
             $subject instanceof DocumentType => $subject->name,
             $subject instanceof ExpiringDocument => $this->documentAuditLabel($subject),
             default => null,

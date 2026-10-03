@@ -50,6 +50,8 @@ return [
         'Membership' => 'Membresía',
         'ModuleLicense' => 'Licencia',
         'vehicle' => 'Vehículo',
+        'person' => 'Persona',
+        'Driver' => 'Conductor',
         'DocumentType' => 'Tipo de documento',
         'ExpiringDocument' => 'Documento',
     ],

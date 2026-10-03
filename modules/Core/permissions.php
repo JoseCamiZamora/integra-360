@@ -41,6 +41,18 @@ return [
     // Audit log (read-only).
     'core.audit.view' => ['company_admin'],
 
+    // People. Deleting is a soft delete; retiring is a status change (with a
+    // user account it also needs core.users.deactivate). Creating their
+    // access needs core.users.create.
+    'core.people.view' => $panelRoles,
+    'core.people.create' => ['company_admin', 'pesv_leader'],
+    'core.people.update' => ['company_admin', 'pesv_leader'],
+    'core.people.delete' => ['company_admin'],
+
+    // Driver profile of a person (section of the person form).
+    'core.drivers.view' => $panelRoles,
+    'core.drivers.update' => ['company_admin', 'pesv_leader'],
+
     // Vehicles. Deleting is a soft delete; retiring is a status change.
     'core.vehicles.view' => $panelRoles,
     'core.vehicles.create' => ['company_admin', 'pesv_leader'],
