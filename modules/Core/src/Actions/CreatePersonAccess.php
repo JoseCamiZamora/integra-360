@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Actions;
 
 use App\Support\Tenancy\CompanyContext;
+use App\Support\Tenancy\MissingCompanyContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Core\Enums\CompanyRole;
@@ -36,6 +37,10 @@ final class CreatePersonAccess
     public function handle(Person $person, array $roles = []): TemporaryCredentials
     {
         $company = Company::query()->findOrFail(CompanyContext::requireId(Person::class));
+
+        if ($person->company_id !== $company->getKey()) {
+            throw MissingCompanyContext::crossCompanyWrite(Person::class);
+        }
 
         $this->ensureCanCreate($person, $roles);
 

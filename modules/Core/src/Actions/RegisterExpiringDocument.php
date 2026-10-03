@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Core\Actions;
 
+use App\Support\Tenancy\CompanyContext;
+use App\Support\Tenancy\MissingCompanyContext;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +36,15 @@ final class RegisterExpiringDocument
      */
     public function handle(Documentable&Model $documentable, DocumentType $type, array $data, array $files = []): ExpiringDocument
     {
+        // The entity must belong to the active company (the type is global
+        // or of the active company: its scope already guarantees it when
+        // loaded, this repeats it for a model loaded some other way).
+        $companyId = CompanyContext::requireId(ExpiringDocument::class);
+
+        if ($documentable->getAttribute('company_id') !== $companyId || ! in_array($type->company_id, [null, $companyId], true)) {
+            throw MissingCompanyContext::crossCompanyWrite(ExpiringDocument::class);
+        }
+
         if (! $type->is_active || ! $type->appliesTo($documentable)) {
             throw ValidationException::withMessages([
                 'document_type_id' => __('core::documents.errors.type_not_applicable'),
