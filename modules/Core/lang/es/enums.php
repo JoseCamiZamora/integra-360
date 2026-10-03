@@ -37,6 +37,10 @@ return [
         'expired' => 'Vencido',
         'no_expiry' => 'Sin vencimiento',
     ],
+    'person_status' => [
+        'active' => 'Activa',
+        'inactive' => 'Retirada',
+    ],
     'compliance_status' => [
         'compliant' => 'Al día',
         'expiring_soon' => 'Por vencer',
