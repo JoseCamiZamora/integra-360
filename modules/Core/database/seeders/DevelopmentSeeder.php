@@ -28,6 +28,9 @@ use RuntimeException;
  *   10100000x0 cargo company: 10 admin, 20 PESV leader, 30 management,
  *              40 area manager, 50 driver (no e-mail), 60 viewer
  *   10200000x0 passenger company, same order
+ *
+ * The cargo company also gets its vehicles, people, assignments and
+ * documents (OperationDevelopmentSeeder).
  */
 final class DevelopmentSeeder extends Seeder
 {
@@ -81,6 +84,8 @@ final class DevelopmentSeeder extends Seeder
             'notes' => 'Licencia de desarrollo (ficticia).',
             'is_active' => true,
         ]));
+
+        $this->call(OperationDevelopmentSeeder::class);
     }
 
     private function usersPerRole(Company $company, string $prefix, SyncUserRoles $syncRoles): void
