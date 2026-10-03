@@ -25,6 +25,11 @@ final class DatabaseModuleAccess implements ModuleAccess
      */
     private array $bestLicense = [];
 
+    /**
+     * @var array<string, Collection<int, ModuleLicense>>
+     */
+    private array $licensableLicenses = [];
+
     public function __construct(
         private readonly ModuleRegistry $registry,
     ) {}
@@ -67,6 +72,39 @@ final class DatabaseModuleAccess implements ModuleAccess
         return new ModuleLimits($license->max_vehicles, $license->max_people);
     }
 
+    public function effectiveLimits(Company $company): ModuleLimits
+    {
+        $active = $this->licensableLicenses($company)
+            ->filter(fn (ModuleLicense $license): bool => $license->accessLevel() === ModuleAccessLevel::Full);
+
+        if ($active->isEmpty()) {
+            return ModuleLimits::unlimited();
+        }
+
+        $highest = fn (string $limit): ?int => $active->contains(fn (ModuleLicense $license): bool => $license->{$limit} === null)
+            ? null
+            : (int) $active->max($limit);
+
+        return new ModuleLimits($highest('max_vehicles'), $highest('max_people'));
+    }
+
+    public function operationalLevel(Company $company): ModuleAccessLevel
+    {
+        $licenses = $this->licensableLicenses($company);
+
+        return $licenses->isEmpty() || $licenses->contains(fn (ModuleLicense $license): bool => $license->accessLevel() === ModuleAccessLevel::Full)
+            ? ModuleAccessLevel::Full
+            : ModuleAccessLevel::ReadOnly;
+    }
+
+    public function currentOperationalLevel(): ModuleAccessLevel
+    {
+        $companyId = CompanyContext::id();
+        $company = $companyId === null ? null : Company::query()->find($companyId);
+
+        return $company === null ? ModuleAccessLevel::ReadOnly : $this->operationalLevel($company);
+    }
+
     public function currentLevel(string $moduleCode): ModuleAccessLevel
     {
         $companyId = CompanyContext::id();
@@ -92,6 +130,20 @@ final class DatabaseModuleAccess implements ModuleAccess
     private function isAlwaysOn(string $moduleCode): bool
     {
         return $this->registry->has($moduleCode) && ! $this->registry->get($moduleCode)->licensable;
+    }
+
+    /**
+     * Every license of a licensable module of the company (memoized).
+     *
+     * @return Collection<int, ModuleLicense>
+     */
+    private function licensableLicenses(Company $company): Collection
+    {
+        $key = $company->getKey().'|'.Carbon::today()->toDateString();
+
+        return $this->licensableLicenses[$key] ??= CompanyContext::run($company, fn () => ModuleLicense::query()->get())
+            ->reject(fn (ModuleLicense $license): bool => $this->isAlwaysOn($license->module_code))
+            ->values();
     }
 
     /**
