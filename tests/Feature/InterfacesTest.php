@@ -47,7 +47,7 @@ it('shows the mobile driver view to drivers', function (): void {
         ->assertSee('<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">', escape: false)
         ->assertSee('¡Hola, Luis!')
         ->assertSee('Jueves, 1 de octubre')
-        ->assertSee('Aquí verás tu vehículo asignado');
+        ->assertSee('Aún no tienes un vehículo asignado. Avisa a tu administrador.');
 });
 
 it('ships no JavaScript in the driver view besides Livewire', function (): void {
