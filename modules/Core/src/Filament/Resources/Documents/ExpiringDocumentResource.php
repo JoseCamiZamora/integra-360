@@ -75,7 +75,7 @@ final class ExpiringDocumentResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('expires_at')
+            ->defaultSort(fn (Builder $query): Builder => DocumentTable::defaultSort($query))
             ->columns([
                 TextColumn::make('holder')
                     ->label(__('core::documents.fields.holder'))

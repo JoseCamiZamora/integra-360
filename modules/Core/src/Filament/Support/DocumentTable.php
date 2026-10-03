@@ -162,6 +162,18 @@ final class DocumentTable
     }
 
     /**
+     * Default order: the soonest expiry first, documents without expiry last
+     * (MySQL would put NULLs first).
+     *
+     * @param  Builder<ExpiringDocument>  $query
+     * @return Builder<ExpiringDocument>
+     */
+    public static function defaultSort(Builder $query): Builder
+    {
+        return $query->orderByRaw('expires_at is null')->orderBy('expires_at');
+    }
+
+    /**
      * Type, files and their counts in one go, without trashed-scope surprises.
      *
      * @param  Builder<ExpiringDocument>  $query

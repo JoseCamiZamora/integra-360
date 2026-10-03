@@ -160,6 +160,16 @@ describe('documents', function (): void {
             ->assertCanNotSeeTableRecords([$this->license]);
     });
 
+    it('shows the soonest expiry first and documents without expiry last', function (): void {
+        $card = ExpiringDocument::factory()
+            ->of($this->vehicle, DocumentType::query()->where('code', 'vehicle.registration_card')->sole())
+            ->expiringOn(null)
+            ->create();
+
+        Livewire::test(ListExpiringDocuments::class)
+            ->assertCanSeeTableRecords([$this->expired, $this->license, $card], inOrder: true);
+    });
+
     it('renews a document from the list, keeping the previous one', function (): void {
         Livewire::test(ListExpiringDocuments::class)
             ->callTableAction('renew', $this->expired->getKey(), [

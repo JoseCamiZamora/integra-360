@@ -50,7 +50,7 @@ final class DocumentsRelationManager extends RelationManager
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query): Builder => DocumentTable::query($query))
-            ->defaultSort('expires_at')
+            ->defaultSort(fn (Builder $query): Builder => DocumentTable::defaultSort($query))
             ->columns(DocumentTable::columns())
             ->filters(DocumentTable::filters())
             ->headerActions([
