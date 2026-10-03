@@ -11,12 +11,15 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Modules\Core\Actions\ResolveHomeUrl;
 use Modules\Core\Console\SyncPermissionsCommand;
+use Modules\Core\Contracts\Documentable;
+use Modules\Core\Enums\DocumentAppliesTo;
 use Modules\Core\Http\Middleware\EnsureActiveCompany;
 use Modules\Core\Http\Middleware\EnsureModuleIsLicensed;
 use Modules\Core\Http\Middleware\EnsurePasswordIsChanged;
@@ -26,12 +29,19 @@ use Modules\Core\Listeners\RecordAuditEvents;
 use Modules\Core\Models\AuditEntry;
 use Modules\Core\Models\Branch;
 use Modules\Core\Models\Company;
+use Modules\Core\Models\DocumentType;
+use Modules\Core\Models\ExpiringDocument;
+use Modules\Core\Models\ExpiringDocumentFile;
 use Modules\Core\Models\Membership;
 use Modules\Core\Models\ModuleLicense;
 use Modules\Core\Models\User;
+use Modules\Core\Models\Vehicle;
 use Modules\Core\Policies\AuditEntryPolicy;
 use Modules\Core\Policies\BranchPolicy;
 use Modules\Core\Policies\CompanyPolicy;
+use Modules\Core\Policies\DocumentTypePolicy;
+use Modules\Core\Policies\ExpiringDocumentFilePolicy;
+use Modules\Core\Policies\ExpiringDocumentPolicy;
 use Modules\Core\Policies\ModuleLicensePolicy;
 use Modules\Core\Policies\UserPolicy;
 use Modules\Core\Services\DatabaseModuleAccess;
@@ -65,6 +75,7 @@ final class CoreServiceProvider extends ModuleServiceProvider
     {
         parent::boot();
 
+        $this->registerMorphMap();
         $this->registerMiddleware();
         $this->registerAuthorization();
         $this->registerAuthRedirects();
@@ -76,6 +87,19 @@ final class CoreServiceProvider extends ModuleServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([SyncPermissionsCommand::class]);
         }
+    }
+
+    /**
+     * Stable aliases for the polymorphic relations of company data (documents
+     * of people and vehicles): the stored type survives refactors and new
+     * entities can be added. Not enforced, so other relations (the audit
+     * log) keep their class names.
+     */
+    private function registerMorphMap(): void
+    {
+        Relation::morphMap([
+            DocumentAppliesTo::Vehicle->value => Vehicle::class,
+        ]);
     }
 
     private function registerMiddleware(): void
@@ -94,6 +118,9 @@ final class CoreServiceProvider extends ModuleServiceProvider
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(ModuleLicense::class, ModuleLicensePolicy::class);
         Gate::policy(AuditEntry::class, AuditEntryPolicy::class);
+        Gate::policy(DocumentType::class, DocumentTypePolicy::class);
+        Gate::policy(ExpiringDocument::class, ExpiringDocumentPolicy::class);
+        Gate::policy(ExpiringDocumentFile::class, ExpiringDocumentFilePolicy::class);
 
         // Explicit rule for the platform administrator: the only one who may
         // query outside the company scope (always audited).
@@ -156,8 +183,22 @@ final class CoreServiceProvider extends ModuleServiceProvider
             $subject instanceof User, $subject instanceof Branch => $subject->name,
             $subject instanceof Membership => User::query()->find($subject->user_id)?->name,
             $subject instanceof ModuleLicense => $subject->module_code,
+            $subject instanceof Vehicle => $subject->plate,
+            $subject instanceof DocumentType => $subject->name,
+            $subject instanceof ExpiringDocument => $this->documentAuditLabel($subject),
             default => null,
         };
+    }
+
+    /**
+     * "SOAT · TST001": type and holder, never the document number.
+     */
+    private function documentAuditLabel(ExpiringDocument $document): string
+    {
+        $holder = $document->documentable;
+        $type = DocumentType::query()->find($document->document_type_id);
+
+        return trim(($type->name ?? '').' · '.($holder instanceof Documentable ? $holder->documentLabel() : ''), ' ·');
     }
 
     private function auditCompanyId(Model $activity): ?string

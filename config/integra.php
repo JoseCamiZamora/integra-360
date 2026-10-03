@@ -24,4 +24,23 @@ return [
         'password' => env('PLATFORM_ADMIN_PASSWORD'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Expiring Document Files
+    |--------------------------------------------------------------------------
+    |
+    | Files attached to expiring documents (SOAT, licenses...). The type is
+    | checked by content, not by extension. Files are stored on the default
+    | disk (S3 in production) under companies/{company}/documents and are
+    | never public: they are served through temporary signed URLs.
+    |
+    */
+
+    'documents' => [
+        'mime_types' => ['application/pdf', 'image/jpeg', 'image/png'],
+        'max_file_kb' => 10240,
+        'max_files' => 4,
+        'temporary_url_minutes' => 5,
+    ],
+
 ];

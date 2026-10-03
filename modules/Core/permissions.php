@@ -40,4 +40,16 @@ return [
 
     // Audit log (read-only).
     'core.audit.view' => ['company_admin'],
+
+    // Document types of the company (global types: platform administrator).
+    'core.document-types.view' => ['company_admin'],
+    'core.document-types.create' => ['company_admin'],
+    'core.document-types.update' => ['company_admin'],
+
+    // Expiring documents. Renewing needs "create"; deleting is a soft delete.
+    'core.documents.view' => $panelRoles,
+    'core.documents.create' => ['company_admin', 'pesv_leader'],
+    'core.documents.update' => ['company_admin', 'pesv_leader'],
+    'core.documents.delete' => ['company_admin', 'pesv_leader'],
+    'core.documents.view-sensitive' => ['company_admin', 'pesv_leader', 'management'],
 ];

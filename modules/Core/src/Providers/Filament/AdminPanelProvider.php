@@ -6,7 +6,9 @@ namespace Modules\Core\Providers\Filament;
 
 use App\Modules\ModuleServiceProvider;
 use Filament\Panel;
+use Illuminate\Support\Facades\Route;
 use Modules\Core\Filament\Tenancy\EditCompanyProfile;
+use Modules\Core\Http\Controllers\DownloadDocumentFile;
 use Modules\Core\Http\Middleware\ApplyTenantContext;
 use Modules\Core\Models\Company;
 
@@ -17,6 +19,8 @@ use Modules\Core\Models\Company;
  */
 final class AdminPanelProvider extends IntegraPanelProvider
 {
+    public const string DOCUMENT_FILE_ROUTE = 'documents.files.show';
+
     public function panel(Panel $panel): Panel
     {
         return $this->configure($panel)
@@ -27,6 +31,10 @@ final class AdminPanelProvider extends IntegraPanelProvider
             ->tenantProfile(EditCompanyProfile::class)
             ->tenantMiddleware([
                 ApplyTenantContext::class,
-            ], isPersistent: true);
+            ], isPersistent: true)
+            ->authenticatedTenantRoutes(function (): void {
+                Route::get('documentos/archivos/{file}', DownloadDocumentFile::class)
+                    ->name(self::DOCUMENT_FILE_ROUTE);
+            });
     }
 }
