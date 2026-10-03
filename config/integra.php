@@ -43,4 +43,28 @@ return [
         'temporary_url_minutes' => 5,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Vehicle Plates (Colombia)
+    |--------------------------------------------------------------------------
+    |
+    | Formats checked on the normalised plate (uppercase, no spaces or
+    | hyphens). Each vehicle type uses the format given in "by_vehicle_type"
+    | or, if absent, "default".
+    |
+    */
+
+    'plates' => [
+        'formats' => [
+            'standard' => '/^[A-Z]{3}\d{3}$/',
+            'motorcycle' => '/^[A-Z]{3}\d{2}[A-Z]$/',
+            'trailer' => '/^[RS]\d{5}$/',
+        ],
+        'default' => 'standard',
+        'by_vehicle_type' => [
+            'motocicleta' => 'motorcycle',
+            'semirremolque' => 'trailer',
+        ],
+    ],
+
 ];

@@ -41,6 +41,12 @@ return [
     // Audit log (read-only).
     'core.audit.view' => ['company_admin'],
 
+    // Vehicles. Deleting is a soft delete; retiring is a status change.
+    'core.vehicles.view' => $panelRoles,
+    'core.vehicles.create' => ['company_admin', 'pesv_leader'],
+    'core.vehicles.update' => ['company_admin', 'pesv_leader'],
+    'core.vehicles.delete' => ['company_admin'],
+
     // Document types of the company (global types: platform administrator).
     'core.document-types.view' => ['company_admin'],
     'core.document-types.create' => ['company_admin'],
