@@ -29,7 +29,7 @@ use Modules\Core\Actions\ResetUserPassword;
 use Modules\Core\Actions\SetMembershipStatus;
 use Modules\Core\Actions\UpdateCompanyUser;
 use Modules\Core\Enums\CompanyRole;
-use Modules\Core\Enums\DocumentType;
+use Modules\Core\Enums\IdentityDocumentType;
 use Modules\Core\Filament\Resources\Users\Pages\ManageUsers;
 use Modules\Core\Models\Branch;
 use Modules\Core\Models\Membership;
@@ -128,8 +128,8 @@ final class UserResource extends Resource
                 ->columnSpanFull(),
             Select::make('document_type')
                 ->label(__('core::users.fields.document_type'))
-                ->options(DocumentType::options())
-                ->default(DocumentType::CC->value)
+                ->options(IdentityDocumentType::options())
+                ->default(IdentityDocumentType::CC->value)
                 ->required()
                 ->native(false)
                 ->live(),

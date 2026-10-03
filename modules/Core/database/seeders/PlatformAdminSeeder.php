@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Modules\Core\Enums\DocumentType;
+use Modules\Core\Enums\IdentityDocumentType;
 use Modules\Core\Models\User;
 
 /**
@@ -25,7 +25,7 @@ final class PlatformAdminSeeder extends Seeder
             return;
         }
 
-        $documentType = DocumentType::from((string) $admin['document_type']);
+        $documentType = IdentityDocumentType::from((string) $admin['document_type']);
 
         $exists = User::query()
             ->where('document_type', $documentType)

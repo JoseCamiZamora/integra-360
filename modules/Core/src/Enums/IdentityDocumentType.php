@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Modules\Core\Enums;
 
 /**
- * Colombian identity documents accepted for users.
+ * Colombian identity documents (users and people). Not to be confused with
+ * the DocumentType model: the configurable catalog of expiring documents.
  */
-enum DocumentType: string
+enum IdentityDocumentType: string
 {
     case CC = 'CC';
     case CE = 'CE';
@@ -17,7 +18,7 @@ enum DocumentType: string
 
     public function label(): string
     {
-        return __('core::enums.document_type.'.$this->value);
+        return __('core::enums.identity_document_type.'.$this->value);
     }
 
     /**

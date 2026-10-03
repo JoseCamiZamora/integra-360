@@ -7,7 +7,7 @@ return [
         'transport' => 'Transporte (misionalidad 1)',
         'other' => 'Otra actividad (misionalidad 2)',
     ],
-    'document_type' => [
+    'identity_document_type' => [
         'CC' => 'Cédula de ciudadanía',
         'CE' => 'Cédula de extranjería',
         'PPT' => 'Permiso por protección temporal',

@@ -7,7 +7,7 @@ namespace Modules\Core\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Modules\Core\Enums\DocumentType;
+use Modules\Core\Enums\IdentityDocumentType;
 use Modules\Core\Models\User;
 
 /**
@@ -26,7 +26,7 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
-            'document_type' => DocumentType::CC,
+            'document_type' => IdentityDocumentType::CC,
             'document_number' => (string) fake()->unique()->numberBetween(10_000_000, 1_999_999_999),
             'email' => fake()->unique()->safeEmail(),
             'phone' => '3'.fake()->numerify('#########'),

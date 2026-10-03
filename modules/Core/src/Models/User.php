@@ -23,7 +23,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Modules\Core\Database\Factories\UserFactory;
 use Modules\Core\Enums\CompanyRole;
-use Modules\Core\Enums\DocumentType;
+use Modules\Core\Enums\IdentityDocumentType;
 use Modules\Core\Notifications\ResetPasswordNotification;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
@@ -38,7 +38,7 @@ use Spatie\Permission\Traits\HasRoles;
  *
  * @property int $id
  * @property string $name
- * @property DocumentType $document_type
+ * @property IdentityDocumentType $document_type
  * @property string $document_number
  * @property string|null $email
  * @property string|null $phone
@@ -236,7 +236,7 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
     protected function casts(): array
     {
         return [
-            'document_type' => DocumentType::class,
+            'document_type' => IdentityDocumentType::class,
             'password' => 'hashed',
             'must_change_password' => 'boolean',
             'is_platform_admin' => 'boolean',

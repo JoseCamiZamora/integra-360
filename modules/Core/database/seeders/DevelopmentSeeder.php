@@ -10,7 +10,7 @@ use Modules\Core\Actions\CreateCompany;
 use Modules\Core\Actions\SyncUserRoles;
 use Modules\Core\Enums\CompanyMissionType;
 use Modules\Core\Enums\CompanyRole;
-use Modules\Core\Enums\DocumentType;
+use Modules\Core\Enums\IdentityDocumentType;
 use Modules\Core\Models\Company;
 use Modules\Core\Models\Membership;
 use Modules\Core\Models\ModuleLicense;
@@ -115,7 +115,7 @@ final class DevelopmentSeeder extends Seeder
     {
         return User::query()->create([
             'name' => $name,
-            'document_type' => DocumentType::CC,
+            'document_type' => IdentityDocumentType::CC,
             'document_number' => $document,
             'email' => $email,
             'phone' => '300'.substr($document, -7),
