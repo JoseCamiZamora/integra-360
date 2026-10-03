@@ -7,6 +7,7 @@ namespace Modules\Core\Policies;
 use App\Support\Tenancy\CompanyContext;
 use Modules\Core\Models\Driver;
 use Modules\Core\Models\User;
+use Modules\Core\Policies\Concerns\ChecksOperationalWriteAccess;
 
 /**
  * Driver profiles of the active company (edited inside the person form;
@@ -15,6 +16,8 @@ use Modules\Core\Models\User;
  */
 final class DriverPolicy
 {
+    use ChecksOperationalWriteAccess;
+
     public function viewAny(User $user): bool
     {
         return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.drivers.view');
@@ -31,12 +34,14 @@ final class DriverPolicy
 
     public function create(User $user): bool
     {
-        return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.drivers.update');
+        return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.drivers.update')
+            && $this->canWriteOperationalData();
     }
 
     public function update(User $user, Driver $driver): bool
     {
-        return ! $user->isPlatformAdmin() && $this->owns($driver) && $user->checkPermissionTo('core.drivers.update');
+        return ! $user->isPlatformAdmin() && $this->owns($driver) && $user->checkPermissionTo('core.drivers.update')
+            && $this->canWriteOperationalData();
     }
 
     public function delete(User $user, Driver $driver): bool

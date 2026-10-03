@@ -7,6 +7,7 @@ namespace Modules\Core\Policies;
 use App\Support\Tenancy\CompanyContext;
 use Modules\Core\Models\DocumentType;
 use Modules\Core\Models\User;
+use Modules\Core\Policies\Concerns\ChecksOperationalWriteAccess;
 
 /**
  * Global types (company_id NULL): only the platform administrator manages
@@ -19,6 +20,8 @@ use Modules\Core\Models\User;
  */
 final class DocumentTypePolicy
 {
+    use ChecksOperationalWriteAccess;
+
     public function viewAny(User $user): bool
     {
         return $user->isPlatformAdmin() || $user->checkPermissionTo('core.document-types.view');
@@ -43,7 +46,8 @@ final class DocumentTypePolicy
             return ! CompanyContext::check();
         }
 
-        return CompanyContext::check() && $user->checkPermissionTo('core.document-types.create');
+        return CompanyContext::check() && $user->checkPermissionTo('core.document-types.create')
+            && $this->canWriteOperationalData();
     }
 
     public function update(User $user, DocumentType $type): bool
@@ -52,7 +56,8 @@ final class DocumentTypePolicy
             return $type->isGlobal();
         }
 
-        return $this->owns($type) && $user->checkPermissionTo('core.document-types.update');
+        return $this->owns($type) && $user->checkPermissionTo('core.document-types.update')
+            && $this->canWriteOperationalData();
     }
 
     public function delete(User $user, DocumentType $type): bool

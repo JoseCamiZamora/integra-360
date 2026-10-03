@@ -7,6 +7,7 @@ namespace Modules\Core\Policies;
 use App\Support\Tenancy\CompanyContext;
 use Modules\Core\Models\User;
 use Modules\Core\Models\VehicleAssignment;
+use Modules\Core\Policies\Concerns\ChecksOperationalWriteAccess;
 
 /**
  * Vehicle assignments of the active company. A driver may view their own.
@@ -15,6 +16,8 @@ use Modules\Core\Models\VehicleAssignment;
  */
 final class VehicleAssignmentPolicy
 {
+    use ChecksOperationalWriteAccess;
+
     public function viewAny(User $user): bool
     {
         return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.assignments.view');
@@ -32,7 +35,8 @@ final class VehicleAssignmentPolicy
 
     public function create(User $user): bool
     {
-        return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.assignments.create');
+        return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.assignments.create')
+            && $this->canWriteOperationalData();
     }
 
     /**
@@ -43,7 +47,8 @@ final class VehicleAssignmentPolicy
         return ! $user->isPlatformAdmin()
             && $this->owns($assignment)
             && $assignment->isCurrent()
-            && $user->checkPermissionTo('core.assignments.update');
+            && $user->checkPermissionTo('core.assignments.update')
+            && $this->canWriteOperationalData();
     }
 
     public function update(User $user, VehicleAssignment $assignment): bool

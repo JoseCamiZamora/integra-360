@@ -7,6 +7,7 @@ namespace Modules\Core\Policies;
 use App\Support\Tenancy\CompanyContext;
 use Modules\Core\Models\User;
 use Modules\Core\Models\Vehicle;
+use Modules\Core\Policies\Concerns\ChecksOperationalWriteAccess;
 
 /**
  * Vehicles of the active company. Never deleted physically: "delete" is a
@@ -17,6 +18,8 @@ use Modules\Core\Models\Vehicle;
  */
 final class VehiclePolicy
 {
+    use ChecksOperationalWriteAccess;
+
     public function viewAny(User $user): bool
     {
         return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.vehicles.view');
@@ -29,7 +32,8 @@ final class VehiclePolicy
 
     public function create(User $user): bool
     {
-        return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.vehicles.create');
+        return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.vehicles.create')
+            && $this->canWriteOperationalData();
     }
 
     public function update(User $user, Vehicle $vehicle): bool
@@ -37,12 +41,14 @@ final class VehiclePolicy
         return ! $user->isPlatformAdmin()
             && $this->owns($vehicle)
             && ! $vehicle->trashed()
-            && $user->checkPermissionTo('core.vehicles.update');
+            && $user->checkPermissionTo('core.vehicles.update')
+            && $this->canWriteOperationalData();
     }
 
     public function delete(User $user, Vehicle $vehicle): bool
     {
-        return ! $user->isPlatformAdmin() && $this->owns($vehicle) && $user->checkPermissionTo('core.vehicles.delete');
+        return ! $user->isPlatformAdmin() && $this->owns($vehicle) && $user->checkPermissionTo('core.vehicles.delete')
+            && $this->canWriteOperationalData();
     }
 
     public function restore(User $user, Vehicle $vehicle): bool

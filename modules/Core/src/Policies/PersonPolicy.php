@@ -7,6 +7,7 @@ namespace Modules\Core\Policies;
 use App\Support\Tenancy\CompanyContext;
 use Modules\Core\Models\Person;
 use Modules\Core\Models\User;
+use Modules\Core\Policies\Concerns\ChecksOperationalWriteAccess;
 
 /**
  * People of the active company. A person may always view their own record
@@ -17,6 +18,8 @@ use Modules\Core\Models\User;
  */
 final class PersonPolicy
 {
+    use ChecksOperationalWriteAccess;
+
     public function viewAny(User $user): bool
     {
         return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.people.view');
@@ -33,7 +36,8 @@ final class PersonPolicy
 
     public function create(User $user): bool
     {
-        return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.people.create');
+        return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.people.create')
+            && $this->canWriteOperationalData();
     }
 
     public function update(User $user, Person $person): bool
@@ -41,7 +45,8 @@ final class PersonPolicy
         return ! $user->isPlatformAdmin()
             && $this->owns($person)
             && ! $person->trashed()
-            && $user->checkPermissionTo('core.people.update');
+            && $user->checkPermissionTo('core.people.update')
+            && $this->canWriteOperationalData();
     }
 
     /**
@@ -65,7 +70,8 @@ final class PersonPolicy
             && $person->user_id === null
             && $person->isActive()
             && ! $person->trashed()
-            && $user->checkPermissionTo('core.users.create');
+            && $user->checkPermissionTo('core.users.create')
+            && $this->canWriteOperationalData();
     }
 
     /**
@@ -73,12 +79,14 @@ final class PersonPolicy
      */
     public function manageDriverProfile(User $user, Person $person): bool
     {
-        return $this->update($user, $person) && $user->checkPermissionTo('core.drivers.update');
+        return $this->update($user, $person) && $user->checkPermissionTo('core.drivers.update')
+            && $this->canWriteOperationalData();
     }
 
     public function delete(User $user, Person $person): bool
     {
-        return ! $user->isPlatformAdmin() && $this->owns($person) && $user->checkPermissionTo('core.people.delete');
+        return ! $user->isPlatformAdmin() && $this->owns($person) && $user->checkPermissionTo('core.people.delete')
+            && $this->canWriteOperationalData();
     }
 
     public function restore(User $user, Person $person): bool

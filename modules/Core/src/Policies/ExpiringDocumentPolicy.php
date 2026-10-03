@@ -7,6 +7,7 @@ namespace Modules\Core\Policies;
 use App\Support\Tenancy\CompanyContext;
 use Modules\Core\Models\ExpiringDocument;
 use Modules\Core\Models\User;
+use Modules\Core\Policies\Concerns\ChecksOperationalWriteAccess;
 
 /**
  * Documents of the active company (their files: ExpiringDocumentFilePolicy).
@@ -17,6 +18,8 @@ use Modules\Core\Models\User;
  */
 final class ExpiringDocumentPolicy
 {
+    use ChecksOperationalWriteAccess;
+
     public function viewAny(User $user): bool
     {
         return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.documents.view');
@@ -31,7 +34,8 @@ final class ExpiringDocumentPolicy
 
     public function create(User $user): bool
     {
-        return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.documents.create');
+        return ! $user->isPlatformAdmin() && $user->checkPermissionTo('core.documents.create')
+            && $this->canWriteOperationalData();
     }
 
     /**
@@ -43,7 +47,8 @@ final class ExpiringDocumentPolicy
         return ! $user->isPlatformAdmin()
             && $this->owns($document)
             && ! $document->trashed()
-            && $user->checkPermissionTo('core.documents.update');
+            && $user->checkPermissionTo('core.documents.update')
+            && $this->canWriteOperationalData();
     }
 
     public function renew(User $user, ExpiringDocument $document): bool
@@ -52,7 +57,8 @@ final class ExpiringDocumentPolicy
             && $this->owns($document)
             && $document->is_current
             && ! $document->trashed()
-            && $user->checkPermissionTo('core.documents.create');
+            && $user->checkPermissionTo('core.documents.create')
+            && $this->canWriteOperationalData();
     }
 
     /**
@@ -62,7 +68,8 @@ final class ExpiringDocumentPolicy
     {
         return ! $user->isPlatformAdmin()
             && $this->owns($document)
-            && $user->checkPermissionTo('core.documents.delete');
+            && $user->checkPermissionTo('core.documents.delete')
+            && $this->canWriteOperationalData();
     }
 
     public function restore(User $user, ExpiringDocument $document): bool
