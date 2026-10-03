@@ -7,16 +7,19 @@ namespace Modules\Core\Actions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Core\Models\Person;
+use Modules\Core\Support\OperationalLimits;
 use Modules\Core\Support\PersonInput;
 
 /**
  * Registers a person of the active company, with their driver profile if
- * they drive. People start active and without a user account.
+ * they drive, within the license limit of active people. People start
+ * active and without a user account.
  */
 final class CreatePerson
 {
     public function __construct(
         private readonly SyncDriverProfile $driverProfile,
+        private readonly OperationalLimits $limits,
     ) {}
 
     /**
@@ -34,6 +37,8 @@ final class CreatePerson
         }
 
         return DB::transaction(function () use ($validated, $driver): Person {
+            $this->limits->ensureCanAddPerson();
+
             $person = Person::query()->create($validated);
 
             if ($driver !== null) {

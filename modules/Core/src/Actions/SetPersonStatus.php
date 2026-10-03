@@ -8,18 +8,21 @@ use Illuminate\Support\Facades\DB;
 use Modules\Core\Enums\PersonStatus;
 use Modules\Core\Models\Membership;
 use Modules\Core\Models\Person;
+use Modules\Core\Support\OperationalLimits;
 
 /**
  * Marks a person as active or inactive (left the company). Nothing is
  * deleted. If the person has a user account, their membership in the active
  * company follows: deactivated with the person and reactivated with them
  * (reversible). Both changes go to the audit log; access to other companies
- * is untouched. Retiring a driver also closes their current assignment.
+ * is untouched. Retiring a driver also closes their current assignment;
+ * reactivating respects the license limit of active people.
  */
 final class SetPersonStatus
 {
     public function __construct(
         private readonly EndCurrentAssignments $endAssignments,
+        private readonly OperationalLimits $limits,
     ) {}
 
     public function handle(Person $person, PersonStatus $status): Person
@@ -29,6 +32,10 @@ final class SetPersonStatus
         }
 
         return DB::transaction(function () use ($person, $status): Person {
+            if ($status === PersonStatus::Active) {
+                $this->limits->ensureCanAddPerson();
+            }
+
             $person->status = $status;
             $person->save();
 

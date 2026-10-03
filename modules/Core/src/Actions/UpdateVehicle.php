@@ -6,7 +6,9 @@ namespace Modules\Core\Actions;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Modules\Core\Enums\VehicleStatus;
 use Modules\Core\Models\Vehicle;
+use Modules\Core\Support\OperationalLimits;
 use Modules\Core\Support\VehicleInput;
 
 /**
@@ -18,6 +20,7 @@ final class UpdateVehicle
 {
     public function __construct(
         private readonly EndCurrentAssignments $endAssignments,
+        private readonly OperationalLimits $limits,
     ) {}
 
     /**
@@ -30,6 +33,11 @@ final class UpdateVehicle
         $validated = VehicleInput::validate($data, $vehicle->getKey());
 
         return DB::transaction(function () use ($vehicle, $validated): Vehicle {
+            // Putting a retired vehicle back in service counts as adding one.
+            if ($vehicle->isRetired() && ($validated['status'] ?? VehicleStatus::Retired->value) !== VehicleStatus::Retired->value) {
+                $this->limits->ensureCanAddVehicle();
+            }
+
             $vehicle->update($validated);
 
             if ($vehicle->isRetired()) {
