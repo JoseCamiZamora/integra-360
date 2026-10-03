@@ -380,6 +380,11 @@ nunca un atajo que salte las políticas.
 | `core.users.view` | ✓ | ✓ | ✓ | | | ✓ |
 | `core.users.create/update/deactivate/reset-password` | ✓ | | | | | |
 | `core.audit.view` | ✓ | | | | | |
+| `core.people.view` | ✓ | ✓ | ✓ | ✓ | | ✓ |
+| `core.people.create/update` | ✓ | ✓ | | | | |
+| `core.people.delete` | ✓ | | | | | |
+| `core.drivers.view` | ✓ | ✓ | ✓ | ✓ | | ✓ |
+| `core.drivers.update` | ✓ | ✓ | | | | |
 | `core.vehicles.view` | ✓ | ✓ | ✓ | ✓ | | ✓ |
 | `core.vehicles.create/update` | ✓ | ✓ | | | | |
 | `core.vehicles.delete` | ✓ | | | | | |
@@ -427,10 +432,32 @@ en Core; los demás módulos los usan por sus contratos, modelos y eventos.
 
 | Modelo | Tabla | Notas |
 |---|---|---|
+| `Person` | `people` | Empresa, ULID, borrado lógico. Documento normalizado, único por empresa y tipo entre las no borradas (`live_document_number`). `user_id` opcional y único. Estado `active` / `inactive` (retirada). Sin datos de salud, fotos ni familiares (Ley 1581) |
+| `Driver` | `drivers` | Empresa. Perfil 1:1 de una persona (`person_id` único): licencia y categoría. La vigencia de la licencia es un `ExpiringDocument`. Se borra lógicamente al dejar de conducir y se restaura si vuelve |
 | `Vehicle` | `vehicles` | Empresa, ULID, borrado lógico. Placa normalizada (mayúsculas, sin espacios ni guiones), única por empresa entre los no borrados (columna virtual `live_plate`) |
 | `DocumentType` | `document_types` | Catálogo configurable (`BelongsToCompanyOrGlobal`): `company_id` nulo = global. `code` único entre los globales y dentro de cada empresa. Se desactiva, nunca se borra |
-| `ExpiringDocument` | `expiring_documents` | Empresa, ULID, borrado lógico. Polimórfico (`documentable`) con alias estables del *morph map* (`vehicle`; `person` en el bloque de personas). Un solo vigente por entidad y tipo (índice único sobre la columna virtual `current_marker`) |
+| `ExpiringDocument` | `expiring_documents` | Empresa, ULID, borrado lógico. Polimórfico (`documentable`) con alias estables del *morph map* (`person`, `vehicle`). Un solo vigente por entidad y tipo (índice único sobre la columna virtual `current_marker`) |
 | `ExpiringDocumentFile` | `expiring_document_files` | Empresa. Hasta 4 por documento |
+
+### Personas y conductores
+
+- `CreatePerson` y `UpdatePerson` validan con `Support\PersonInput`; el
+  perfil de conductor va en el mismo formulario (`SyncDriverProfile`).
+- **Crear acceso al sistema** (`CreatePersonAccess`): usa
+  `CreateCompanyUser` de I360-01 (contraseña temporal visible una vez,
+  cambio obligatorio, auditoría) y enlaza `person.user_id`. Los conductores
+  reciben siempre el rol `driver`; a quien no conduce se le eligen roles.
+  Rechaza un documento o correo que ya tiene cuenta (no vincula cuentas
+  entre empresas) y a personas retiradas. Permiso: `core.users.create`.
+- **Retirar o reactivar** (`SetPersonStatus`): si la persona tiene cuenta,
+  su membresía en la empresa sigue al estado (se desactiva al retirarla y
+  se reactiva al reactivarla); las demás empresas no cambian. Ambos cambios
+  quedan en la auditoría. Con cuenta exige además `core.users.deactivate`.
+- El rol `driver` de la cuenta sigue al perfil de conductor (se agrega o se
+  quita, sin tocar los otros roles); nunca deja una cuenta sin roles.
+- Un conductor puede ver su propia ficha (`PersonPolicy::view`).
+- La auditoría de personas guarda nombres y datos laborales; nunca fecha de
+  nacimiento, teléfono, correo, documento ni número de licencia.
 
 ### Vehículos
 
@@ -451,7 +478,7 @@ en Core; los demás módulos los usan por sus contratos, modelos y eventos.
 
 - `forVehicle($vehicle, $at = null)` y `forVehicles($vehicles)` (listas y
   tableros: dos consultas en total, sin importar cuántos vehículos).
-  `forPerson()` llega con las personas.
+  `forPerson()` y `forPeople()` (una consulta más para saber quién conduce).
 - Devuelve un `Contracts\ComplianceReport`: `status`
   (`Enums\ComplianceStatus`: `compliant` "Al día", `expiring_soon` "Por
   vencer", `non_compliant` "No cumple"), `expired`, `expiringSoon`,
@@ -519,7 +546,7 @@ crea los códigos que faltan; no toca los editados.
 
 ## 12. Pendientes conocidos
 
-- **I360-02 (en curso):** personas y conductores, asignaciones, límites de
+- **I360-02 (en curso):** asignaciones, límites de
   licencia y pantallas.
 - Vincular una cuenta existente a otra empresa (consultores): hoy un documento
   ya registrado se rechaza para no mostrar datos personales entre empresas;
