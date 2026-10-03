@@ -4,7 +4,7 @@ Este documento es la fuente de contexto para cualquier IA (o persona) que
 trabaje en el proyecto. **Léelo completo antes de cambiar código y actualízalo
 en cada prompt (I360-xx) que cambie algo de lo que aquí se describe.**
 
-Última actualización: I360-01 · Núcleo (octubre de 2026).
+Última actualización: I360-02 · Entidades operativas, en curso (octubre de 2026).
 
 ## 1. Propósito del producto
 
@@ -52,6 +52,7 @@ justificarlo.
 app/                      ← "Kernel": infraestructura compartida, sin lógica de negocio
   Modules/                ← ModuleServiceProvider (base), ModuleRegistry, ModuleScaffolder
   Support/Tenancy/        ← CompanyContext, BelongsToCompany, CompanyScope (multiempresa)
+                            y BelongsToCompanyOrGlobal (catálogos globales + de empresa)
   Support/Status/         ← StatusTone (enum) + HasStatusTone (contrato de estados)
   Support/DesignTokens.php← espejo PHP del color primario (para Filament)
   View/Components/        ← <x-status-badge>
@@ -309,6 +310,14 @@ sistema.** Una empresa jamás ve datos de otra.
   lanza `MissingCompanyContext`.** Nunca devuelve datos de todas.
 - Solo el super administrador puede consultar fuera del *scope*, de forma
   explícita: `Modelo::query()->withoutCompanyScope()`. Queda en la auditoría.
+- Catálogos que mezclan registros globales (`company_id` nulo, de la
+  plataforma) con registros de cada empresa (tipos de documento; luego las
+  listas del PESV): `App\Support\Tenancy\BelongsToCompanyOrGlobal`. Las
+  consultas ven los globales más los de la empresa activa, nunca los de
+  otra, y sin empresa activa lanzan `MissingCompanyContext`. Un global solo
+  se crea con `Modelo::createGlobal()` fuera de toda empresa, y no se puede
+  cambiar ni borrar desde dentro de una. `Modelo::query()->globalOnly()`
+  lista solo los globales (panel de plataforma, seeders).
 - `User` no lleva `company_id` (una cuenta puede atender varias empresas): los
   usuarios de la empresa activa son los que tienen una `Membership` en ella
   (`User::query()->inActiveCompany()`). Las políticas lo vuelven a comprobar.
@@ -371,7 +380,14 @@ nunca un atajo que salte las políticas.
 | `core.users.view` | ✓ | ✓ | ✓ | | | ✓ |
 | `core.users.create/update/deactivate/reset-password` | ✓ | | | | | |
 | `core.audit.view` | ✓ | | | | | |
+| `core.document-types.view/create/update` | ✓ | | | | | |
+| `core.documents.view` | ✓ | ✓ | ✓ | ✓ | | ✓ |
+| `core.documents.create/update/delete` | ✓ | ✓ | | | | |
+| `core.documents.view-sensitive` | ✓ | ✓ | ✓ | | | |
 | `pesv.overview.view` | ✓ | ✓ | ✓ | ✓ | | ✓ |
+
+Los permisos usan guion (`view-sensitive`, `document-types`): lo exige el
+formato que valida `permissions:sync`.
 
 ### Licencias
 
@@ -399,10 +415,73 @@ contraseña y consultas fuera del *scope*. Cada registro guarda empresa,
 autor, IP y una etiqueta del sujeto. **Nunca** contraseñas ni tokens.
 `company_admin` ve la de su empresa; el super administrador, la de todas.
 
-## 11. Pendientes conocidos
+## 11. Entidades operativas (I360-02)
 
-- **I360-02:** personas, conductores como perfil, vehículos y documentos con
-  vencimiento; aplicar los límites de `ModuleLimits` al crear registros.
+Personas, conductores, vehículos y sus documentos con vencimiento. Todo vive
+en Core; los demás módulos los usan por sus contratos, modelos y eventos.
+
+### Entidades
+
+| Modelo | Tabla | Notas |
+|---|---|---|
+| `Vehicle` | `vehicles` | Empresa, ULID, borrado lógico. Placa normalizada (mayúsculas, sin espacios ni guiones), única por empresa entre los no borrados (columna virtual `live_plate`) |
+| `DocumentType` | `document_types` | Catálogo configurable (`BelongsToCompanyOrGlobal`): `company_id` nulo = global. `code` único entre los globales y dentro de cada empresa. Se desactiva, nunca se borra |
+| `ExpiringDocument` | `expiring_documents` | Empresa, ULID, borrado lógico. Polimórfico (`documentable`) con alias estables del *morph map* (`vehicle`; `person` en el bloque de personas). Un solo vigente por entidad y tipo (índice único sobre la columna virtual `current_marker`) |
+| `ExpiringDocumentFile` | `expiring_document_files` | Empresa. Hasta 4 por documento |
+
+### Documentos
+
+- **Registrar** (`RegisterExpiringDocument`): el tipo debe aplicar a la
+  entidad (`applies_to` y `vehicle_types`) y estar activo. Si ya hay uno
+  vigente del mismo tipo, se rechaza: se renueva.
+- **Renovar** (`RenewExpiringDocument`): crea un registro nuevo vigente,
+  marca el anterior `is_current = false` y conserva ambos con sus archivos.
+  Queda en la auditoría como `document_renewed`.
+- **Estado** (`DocumentStatus::evaluate()`): `valid`, `expiring_soon`
+  (faltan `warning_days` días o menos), `expired`, `no_expiry`. Se calcula
+  por día calendario de Bogotá: vale hasta el final del día de vencimiento.
+  Nunca se guarda.
+- **Archivos** (`Support\DocumentFileStore`, configuración en
+  `config/integra.php` → `documents`): PDF, JPG o PNG detectados por
+  contenido (no por extensión), máximo 10 MB y 4 por documento. Se guardan
+  en el disco por defecto en `companies/{empresa}/documents/{documento}/`
+  con nombre aleatorio, nunca públicos. Se descargan solo por
+  `/app/{empresa}/documentos/archivos/{archivo}`, que autoriza
+  (`ExpiringDocumentFilePolicy`: ver el documento y, si el tipo es
+  sensible, `core.documents.view-sensitive`) y redirige a una URL temporal
+  firmada de 5 minutos.
+- La auditoría guarda tipo, entidad, fechas y vigencia; nunca el número ni
+  las observaciones.
+
+### Tipos de documento sembrados (globales, `DocumentTypeCatalogSeeder`)
+
+Nombres y obligatoriedad por validar con la empresa piloto. El seeder solo
+crea los códigos que faltan; no toca los editados.
+
+| Código | Nombre | Aplica a | Vence | Obligatorio | Bloquea | Sensible |
+|---|---|---|:-:|:-:|:-:|:-:|
+| `vehicle.soat` | SOAT | Vehículo | ✓ | ✓ | ✓ | |
+| `vehicle.technical_inspection` | Revisión técnico-mecánica y de emisiones contaminantes | Vehículo | ✓ | ✓ | ✓ | |
+| `vehicle.registration_card` | Tarjeta de propiedad (licencia de tránsito) | Vehículo | | ✓ | | |
+| `vehicle.operation_card` | Tarjeta de operación | Vehículo | ✓ | ✓ | ✓ | |
+| `vehicle.liability_insurance` | Póliza de responsabilidad civil | Vehículo | ✓ | | ✓ | |
+| `person.driving_license` | Licencia de conducción | Persona (conductores) | ✓ | ✓ | ✓ | |
+| `person.occupational_exam` | Examen médico ocupacional | Persona (conductores) | ✓ | ✓ | | ✓ |
+| `person.defensive_driving` | Curso de conducción defensiva | Persona | ✓ | | | |
+
+### API pública de Core para otros módulos
+
+- `Contracts\Documentable`: entidad con documentos (`documentSubject()`,
+  `documentVehicleType()`, `documentLabel()`, `documents()`).
+- `Events\ExpiringDocumentRegistered` (documento, entidad) y
+  `Events\ExpiringDocumentRenewed` (nuevo, anterior, entidad). Se despachan
+  después del *commit* y llevan `companyId` para que un oyente en cola abra
+  `CompanyContext::run()`. Los consumirá I360-03 (alertas).
+
+## 12. Pendientes conocidos
+
+- **I360-02 (en curso):** estado documental (`DocumentCompliance`),
+  personas y conductores, asignaciones, límites de licencia y pantallas.
 - Vincular una cuenta existente a otra empresa (consultores): hoy un documento
   ya registrado se rechaza para no mostrar datos personales entre empresas;
   lo hará el super administrador en un prompt posterior.
