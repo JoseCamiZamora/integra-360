@@ -14,6 +14,7 @@ Guía para crear y mantener el entorno de producción de Integra 360 en
 | Runtime | PHP 8.4 · Node 22 |
 | Base de datos | Laravel MySQL (MySQL 8) |
 | Archivos | Bucket de Laravel Object Storage, privado, disco `s3`, por defecto |
+| Límites de PHP | `upload_max_filesize` ≥ 12M y `post_max_size` ≥ 16M (fotos de documentos desde el celular; ver sección 3) |
 | Colas | Driver `database` + 1 proceso `queue:work` en el App cluster |
 | Programador | Toggle **Scheduler** del App cluster |
 | Despliegue | Solo desde GitHub Actions (deploy hook), después de `composer check` |
@@ -70,6 +71,23 @@ variable del bucket exista en esa fase:
 3. Comprueba en **Settings → General** que aparecen `FILESYSTEM_DISK=s3` y las
    `AWS_*` del bucket. Sin las credenciales `AWS_*`, la compilación pasa, pero
    las subidas fallan con error (nunca caen al disco local).
+
+### Tamaño de las subidas
+
+Los documentos aceptan hasta 10 MB por archivo (`config/integra.php` →
+`documents.max_file_kb`) y Livewire hasta 12 MB. PHP debe permitir al menos
+eso, o las fotos tomadas con el celular (de 3 a 6 MB) fallan con "Error
+durante la subida":
+
+- `upload_max_filesize` ≥ `12M` y `post_max_size` ≥ `16M`.
+- En local (Herd) se ajustan en
+  `C:\Users\<usuario>\.config\herd\bin\php84\php.ini` y se reinicia
+  `php artisan serve`. Los valores de fábrica de Herd (2M y 8M) no alcanzan.
+- En Laravel Cloud, con el disco por defecto `s3`, Livewire sube los archivos
+  temporales directo del navegador al bucket con una URL prefirmada, sin pasar
+  por PHP. Antes del piloto hay que comprobar dos cosas en el entorno real:
+  que el bucket acepte esas subidas desde el dominio de la aplicación (CORS) y
+  los límites de PHP del entorno, por si la subida pasa por la aplicación.
 
 ## 4. Variables de entorno
 

@@ -260,7 +260,10 @@ php artisan db:seed --class=ProductionSeeder --force  # producción: catálogo, 
 
 Entorno Windows del desarrollador: el `PATH` resuelve `php` al PHP 8.1 de
 XAMPP. Usa siempre el PHP 8.4 de Herd y MySQL en el puerto 3307 (ver
-`README.md`). Nunca toques XAMPP ni MariaDB (3306).
+`README.md`). Nunca toques XAMPP ni MariaDB (3306). El `php.ini` de Herd
+debe tener `upload_max_filesize = 12M` y `post_max_size = 16M` (los valores de
+fábrica, 2M y 8M, rompen la subida de fotos desde el celular; ver
+`docs/deploy.md`, sección 3).
 
 ## 9. Cómo agregar un módulo nuevo
 
